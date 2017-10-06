@@ -12,7 +12,7 @@ source ~/git/spinnaker_tools/setup
 Compile commands:
 export SPINN_DIRS=~/git/spinnaker_tools
 export PATH=$PATH:~/gcc-arm-none-eabi-5_4-2016q3/bin
-make -f $SPINN_DIRS/make/app.make APP=hello_world
+make 
 
 This will compile the application in hello_world.c and produce a SpiNNaker binary called hello_world.aplx in the current directory.
 
