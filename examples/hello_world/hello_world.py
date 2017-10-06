@@ -7,6 +7,17 @@ Each core stores into its region in SDRAM the string:
 We then fetch the written data and print it on the python console.
 """
 
+'''
+source ~/git/spinnaker_tools/setup 
+Compile commands:
+export SPINN_DIRS=~/git/spinnaker_tools
+export PATH=$PATH:~/gcc-arm-none-eabi-5_4-2016q3/bin
+make -f $SPINN_DIRS/make/app.make APP=hello_world
+
+This will compile the application in hello_world.c and produce a SpiNNaker binary called hello_world.aplx in the current directory.
+
+'''
+
 import spinnaker_graph_front_end as front_end
 
 from spinnaker_graph_front_end.examples.hello_world.hello_world_vertex\
