@@ -24,13 +24,19 @@ import os
 
 '''-----------------------------------------------------------------------------------------------------'''
 
-def load_data_onto_spinnaker(total_number_of_cores):
+def load_data_onto_spinnaker(total_number_of_cores, data):
+    
+    data_len = len(data) -1
     
     for x in range(0, total_number_of_cores):
-        front_end.add_machine_vertex(
-            Vertex,
-            {"A",1},
-            label="Data packet at x {}".format(x))
+        if x < data_len:
+            front_end.add_machine_vertex(
+                 Vertex,
+                 {
+                  "entry": data[x][0],
+                  "value": 1
+                 },
+            label="Data packet at x {}".format(x))   
         
 '''-----------------------------------------------------------------------------------------------------'''
         
@@ -54,7 +60,7 @@ determine the data volume each core should take'''
 total_number_of_items = len(raw_data) - 1
 volume_per_core = total_number_of_items/total_number_of_cores
 
-load_data_onto_spinnaker(total_number_of_cores)
+load_data_onto_spinnaker(total_number_of_cores, raw_data)
 
 front_end.run(10)
 
@@ -65,8 +71,8 @@ for placement in sorted(placements.placements,
                         key=lambda p: (p.x, p.y, p.p)):
 
     if isinstance(placement.vertex, Vertex):
-        hello_world = placement.vertex.read(placement, buffer_manager)
+        result = placement.vertex.read(placement, buffer_manager)
         logger.info("{}, {}, {} > {}".format(
-            placement.x, placement.y, placement.p, hello_world))
+            placement.x, placement.y, placement.p, result))
 
 front_end.stop()
