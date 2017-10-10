@@ -33,8 +33,6 @@ typedef enum transmission_region_elements {
     HAS_KEY, MY_KEY
 } transmission_region_elements;
 
-
-
 void receive_data(uint key, uint payload) {
     use(key);
     use(payload);
@@ -47,32 +45,32 @@ void iobuf_data(){
 
     log_info("Data address is %08x", data_address);
 
-    char* my_string = (char *) &data_address[1];
+    int* my_string = (int *) &data_address[0];
     log_info("Data read is: %s", my_string);
 }
 
 void record_data() {
-    log_debug("Recording data...");
+    log_info("Recording data...");
 
     uint chip = spin1_get_chip_id();
 
     uint core = spin1_get_core_id();
 
-    log_debug("Issuing 'Vertex' from chip %d, core %d", chip, core);
+    log_info("Issuing 'Vertex' from chip %d, core %d", chip, core);
 
     address_t address = data_specification_get_data_address();
     address_t data_address =
         data_specification_get_region(RECORDED_DATA, address);
 
-    char* data_string = (char *) &data_address[1];
-
+    int* data_string = (int *) &data_address[0];
+    log_info("Data read is: %s", data_string);
     bool recorded = recording_record(
-        0, data_string, 128 * sizeof(char));
+        1, data_string, 16 * sizeof(int));
 
     if (recorded) {
-        log_debug("Vertex data recorded successfully!");
+        log_info("Vertex data recorded successfully!");
     } else {
-        log_error("Vertex was not recorded...");
+        log_info("Vertex was not recorded...");
     }
 }
 
@@ -106,7 +104,7 @@ void update(uint ticks, uint b) {
 
     time++;
 
-    log_debug("on tick %d of %d", time, simulation_ticks);
+    log_info("on tick %d of %d", time, simulation_ticks);
 
     // check that the run time hasn't already elapsed and thus needs to be
     // killed
@@ -148,7 +146,7 @@ static bool initialize(uint32_t *timer_period) {
 
     // Read the header
     if (!data_specification_read_header(address)) {
-        log_error("failed to read the data spec header");
+        log_info("failed to read the data spec header");
         return false;
     }
 

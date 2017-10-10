@@ -30,7 +30,8 @@ class Vertex(
     DATA_REGIONS = Enum(
         value="DATA_REGIONS",
         names=[('SYSTEM', 0),
-               ('STRING_DATA', 1)])
+               ('INPUT_DATA', 1),
+               ('OUTPUT_DATA', 2)])
 
     CORE_APP_IDENTIFIER = 0xBEEF
 
@@ -52,8 +53,8 @@ class Vertex(
         self.entry = entry
         self.value = value
 
-        self._string_data_size = 128
-        self._int_data_size = 32
+        self._input_data_size = 128
+        self._output_data_size = 128
 
         self.placement = None
 
@@ -65,14 +66,9 @@ class Vertex(
             dtcm=DTCMResource(100), sdram=SDRAMResource(100))
 
         resources.extend(recording_utilities.get_recording_resources(
-           [self._string_data_size],
+           [self._output_data_size],
             self._receive_buffer_host, self._receive_buffer_port))
         
-        '''
-        resources.extend(recording_utilities.get_recording_resources(
-           [self._int_data_size],
-            self._receive_buffer_host, self._receive_buffer_port))
-        '''
         return resources
 
     @overrides(AbstractHasAssociatedBinary.get_binary_file_name)
@@ -93,8 +89,6 @@ class Vertex(
         setup_size = constants.SYSTEM_BYTES_REQUIREMENT
 
         # Reserve SDRAM space for memory areas:
-
-        # Create the data regions for hello world
         self._reserve_memory_regions(spec, setup_size)
 
         # write data for the simulation data item
@@ -103,50 +97,41 @@ class Vertex(
             self.get_binary_file_name(), machine_time_step,
             time_scale_factor))
 
-        # recording data region
-        spec.switch_write_focus(self.DATA_REGIONS.STRING_DATA.value)
+        # input data region
+        spec.switch_write_focus(self.DATA_REGIONS.INPUT_DATA.value)
+    
         spec.write_array(recording_utilities.get_recording_header_array(
-            [self._string_data_size], self._time_between_requests,
-            self._string_data_size + 256, iptags))
+            [self._input_data_size], self._time_between_requests,
+            self._input_data_size))
         
         #convert the entry string into an integer array before writing it to SDRAM
         spec.write_array(string_to_ascii_arr(self.entry))
         
-        '''
-        spec.switch_write_focus(self.DATA_REGIONS.INT_DATA.value)
+        # recording data (output) region
+        spec.switch_write_focus(self.DATA_REGIONS.OUTPUT_DATA.value)
         spec.write_array(recording_utilities.get_recording_header_array(
-            [self._int_data_size], self._time_between_requests,
-            self._int_data_size + 256, iptags))  
-        
-        #assign a value to the entry
-        spec.write_value(self.value)      
-        '''
+            [self._output_data_size], self._time_between_requests,
+            self._output_data_size, iptags))      
+
         # End-of-Spec:
         spec.end_specification()
 
     def _reserve_memory_regions(self, spec, system_size):
+        
         spec.reserve_memory_region(
             region=self.DATA_REGIONS.SYSTEM.value, size=system_size,
             label='systemInfo')
-        '''
-        spec.reserve_memory_region(
-            region=self.DATA_REGIONS.STRING_DATA.value,
-            size=recording_utilities.get_recording_header_size(1),
-            label="Recording_header")
-        '''
         
         #ask for specifics regarding recording_utilities.get_recording_data_size([8,8])
         spec.reserve_memory_region(
-            region=self.DATA_REGIONS.STRING_DATA.value,
+            region=self.DATA_REGIONS.INPUT_DATA.value,
             size=recording_utilities.get_recording_data_size([12,12]) ,
-            label="Recording_data")   
+            label="Input_data")   
         
-        '''
         spec.reserve_memory_region(
-            region=self.DATA_REGIONS.INT_DATA.value,
+            region=self.DATA_REGIONS.OUTPUT_DATA.value,
             size=recording_utilities.get_recording_header_size(1),
-            label="Recording")
-        '''
+            label="Recording_header")
 
     def read(self, placement, buffer_manager):
         """ Get the data written into sdram
@@ -156,7 +141,7 @@ class Vertex(
         :return: string output
         """
         data_pointer, missing_data = buffer_manager.get_data_for_vertex(
-            placement, 0)
+            placement, 2)
         if missing_data:
             raise Exception("missing data!")
         record_raw = data_pointer.read_all()
@@ -164,15 +149,15 @@ class Vertex(
         return output
 
     def get_minimum_buffer_sdram_usage(self):
-        return self._string_data_size
+        return self._input_data_size + self._output_data_size
 
     def get_n_timesteps_in_buffer_space(self, buffer_space, machine_time_step):
         return recording_utilities.get_n_timesteps_in_buffer_space(
             buffer_space, len("Vertex"))
 
     def get_recorded_region_ids(self):
-        return [0]
+        return [0,1]
 
     def get_recording_region_base_address(self, txrx, placement):
         return helpful_functions.locate_memory_region_for_placement(
-            placement, self.DATA_REGIONS.STRING_DATA.value, txrx)
+            placement, self.DATA_REGIONS.OUTPUT_DATA.value, txrx)
