@@ -62,7 +62,7 @@ volume_per_core = total_number_of_items/total_number_of_cores
 
 load_data_onto_spinnaker(total_number_of_cores, raw_data)
 
-front_end.run(10)
+front_end.run(2)
 
 placements = front_end.placements()
 buffer_manager = front_end.buffer_manager()

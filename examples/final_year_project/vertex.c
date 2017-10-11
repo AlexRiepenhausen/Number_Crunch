@@ -15,12 +15,13 @@ static uint32_t time = 0;
 static uint32_t infinite_run;
 
 //! The recording flags
-static uint32_t recording_flags = 0;
+static uint32_t recording_flags = 2;
 
 //! human readable definitions of each region in SDRAM
 typedef enum regions_e {
     SYSTEM_REGION,
-    RECORDED_DATA
+    INPUT_DATA,
+	OUTPUT_DATA
 } regions_e;
 
 //! values for the priority for each callback
@@ -41,13 +42,14 @@ void receive_data(uint key, uint payload) {
 void iobuf_data(){
     address_t address = data_specification_get_data_address();
     address_t data_address =
-        data_specification_get_region(RECORDED_DATA, address);
+        data_specification_get_region(INPUT_DATA, address);
 
     log_info("Data address is %08x", data_address);
 
     int* my_string = (int *) &data_address[0];
     log_info("Data read is: %s", my_string);
 }
+
 
 void record_data() {
     log_info("Recording data...");
@@ -58,20 +60,32 @@ void record_data() {
 
     log_info("Issuing 'Vertex' from chip %d, core %d", chip, core);
 
+    //access the partition of the SDRAM where input data is stored
     address_t address = data_specification_get_data_address();
     address_t data_address =
-        data_specification_get_region(RECORDED_DATA, address);
+        data_specification_get_region(INPUT_DATA, address);
 
-    int* data_string = (int *) &data_address[0];
-    log_info("Data read is: %s", data_string);
+    //build the data entry from the memory addresses provided (here 1 - 16)
+    int i = 0;
+    for(i = 0; i < 16; i++){
+      if(i > 0){
+        strcat(&data_address[0],&data_address[i]);
+      }
+    }
+
+    //log the data entry
+    log_info("Data read is: %s", &data_address[0]);
+
+    //record the data entry in the first recording region (which is OUTPUT)
     bool recorded = recording_record(
-        1, data_string, 16 * sizeof(int));
+      0, &data_address[0], 16 * sizeof(char));
 
     if (recorded) {
         log_info("Vertex data recorded successfully!");
     } else {
         log_info("Vertex was not recorded...");
     }
+
 }
 
 //! \brief Initialises the recording parts of the model
@@ -79,7 +93,7 @@ void record_data() {
 static bool initialise_recording(){
     address_t address = data_specification_get_data_address();
     address_t recording_region = data_specification_get_region(
-        RECORDED_DATA, address);
+        OUTPUT_DATA, address);
     bool success = recording_initialize(recording_region, &recording_flags);
     log_info("Recording flags = 0x%08x", recording_flags);
     return success;
