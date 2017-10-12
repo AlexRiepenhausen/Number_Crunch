@@ -9,8 +9,6 @@ Compile commands:
 export SPINN_DIRS=~/git/spinnaker_tools
 export PATH=$PATH:~/gcc-arm-none-eabi-5_4-2016q3/bin
 make 
-
-This will compile the application in hello_world.c and produce a SpiNNaker binary called hello_world.aplx in the current directory.
 '''
 
 '''-----------------------------------------------------------------------------------------------------'''
@@ -33,8 +31,8 @@ def load_data_onto_spinnaker(total_number_of_cores, data):
             front_end.add_machine_vertex(
                  Vertex,
                  {
-                  "entry": data[x][0],
-                  "value": 1
+                  "entry": [data[x][0],data[x][0]],
+                  "value": [123]
                  },
             label="Data packet at x {}".format(x))   
         

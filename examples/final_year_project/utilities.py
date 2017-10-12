@@ -1,6 +1,7 @@
+
 '''
 convert a string into an array of ascii numbers
-Default size of string is 
+each element of the array occupies 1 byte of memory space
 '''
 def string_to_ascii_arr(string, size):
   
@@ -21,6 +22,6 @@ def string_to_ascii_arr(string, size):
     while count < size:
         ascii.append(0)
         count = count + 1
-      
-    return ascii
 
+
+    return ascii

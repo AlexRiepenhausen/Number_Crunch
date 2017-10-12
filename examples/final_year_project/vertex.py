@@ -66,7 +66,7 @@ class Vertex(
             dtcm=DTCMResource(100), sdram=SDRAMResource(100))
 
         resources.extend(recording_utilities.get_recording_resources(
-           [self._output_data_size,self._output_data_size,self._output_data_size],
+           [self._output_data_size],
             self._receive_buffer_host, self._receive_buffer_port))
         
         return resources
@@ -106,7 +106,8 @@ class Vertex(
         
         # input data region
         spec.switch_write_focus(self.DATA_REGIONS.INPUT_DATA.value)
-        spec.write_array(string_to_ascii_arr(self.entry, 16)) 
+        spec.write_array(string_to_ascii_arr(self.entry[0], 16))
+        spec.write_array(string_to_ascii_arr(self.entry[1], 16))  
 
         # End-of-Spec:
         spec.end_specification()
@@ -120,7 +121,7 @@ class Vertex(
         #ask for specifics regarding recording_utilities.get_recording_data_size([8,8])
         spec.reserve_memory_region(
             region=self.DATA_REGIONS.INPUT_DATA.value,
-            size=self._output_data_size,
+            size=self._input_data_size,
             label="Input_data")   
         
         spec.reserve_memory_region(

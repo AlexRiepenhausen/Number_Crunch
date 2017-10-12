@@ -69,18 +69,38 @@ void record_data() {
     int i = 0;
     for(i = 0; i < 16; i++){
       if(i > 0){
+    	  log_info("Address: %d", &data_address[i]);
+      }
+    }
+    for(i = 0; i < 16; i++){
+      log_info("Value: %d", *(&data_address[i]));
+      if(i > 0){
         strcat(&data_address[0],&data_address[i]);
       }
     }
 
+    char *entry1 = &data_address[0];
+
+    for(i = 16; i < 32; i++){
+      if(i > 16){
+        strcat(&data_address[16],&data_address[i]);
+      }
+    }
+
+    char *entry2 = &data_address[16];
+
     //log the data entry
-    log_info("Data read is: %s", &data_address[0]);
+    log_info("Entry is: %s", entry1);
+    log_info("Entry is: %s", entry2); //32 bytes allocates so far! -> 32*4 = 128 in python
 
     //record the data entry in the first recording region (which is OUTPUT)
-    bool recorded = recording_record(
-      0, &data_address[0], 16 * sizeof(char));
+    bool recorded1 = recording_record(
+      0, entry1, 16 * sizeof(char));
 
-    if (recorded) {
+    bool recorded2 = recording_record(
+      0, entry2, 16 * sizeof(char));
+
+    if (recorded1) {
         log_info("Vertex data recorded successfully!");
     } else {
         log_info("Vertex was not recorded...");
