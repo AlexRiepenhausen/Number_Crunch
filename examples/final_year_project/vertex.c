@@ -34,6 +34,36 @@ typedef enum transmission_region_elements {
     HAS_KEY, MY_KEY
 } transmission_region_elements;
 
+//global variables holding the data pointers
+struct header_info {
+
+   unsigned int num_cols;
+   /* number of columns
+    * in the original csv file
+    */
+   unsigned int num_rows;
+   /* number of rows
+    * in the original csv file
+    */
+   unsigned int string_size;
+   /* number of bytes that
+    * are allocated for each individual string
+    */
+   unsigned int flag;
+   /* flag has 32bits
+    * each bit can be 0 or 1
+    * 0 stands for string data
+    * 1 stands for integer data
+    * Example: if the first bit is 0,
+    *          the first columns holds string data
+    * Warning: There should be no more than 32 columns
+    */
+
+};
+
+
+struct header_info header; /* Holds header information globally */
+
 void receive_data(uint key, uint payload) {
     use(key);
     use(payload);
@@ -50,14 +80,39 @@ void iobuf_data(){
     log_info("Data read is: %s", my_string);
 }
 
+void record_string_entry(unsigned int *int_arr) {
 
-void record_data() {
-    log_info("Recording data...");
+	//convert the array of [size] integers to a 4*[size] char array
+	unsigned char buffer[header.string_size];
 
+	unsigned int i;
+	unsigned int size = header.string_size/4;
+
+	for(i = 0; i < size; i++) {
+      buffer[size*i + 0] = (int_arr[i] >> 24) & 0xFF;
+	  buffer[size*i + 1] = (int_arr[i] >> 16) & 0xFF;
+	  buffer[size*i + 2] = (int_arr[i] >> 8) & 0xFF;
+	  buffer[size*i + 3] =  int_arr[i] & 0xFF;
+	}
+
+    log_info("Entry : %d", buffer);
+
+    //record the data entry in the first recording region (which is OUTPUT)
+    bool recorded = recording_record(0, buffer, header.string_size * sizeof(unsigned char));
+
+    if (recorded) {
+        log_info("Vertex data recorded successfully!");
+    } else {
+        log_info("Vertex was not recorded...");
+    }
+
+}
+
+void retrieve_data(){
+
+    log_info("Retrieving data...");
     uint chip = spin1_get_chip_id();
-
     uint core = spin1_get_core_id();
-
     log_info("Issuing 'Vertex' from chip %d, core %d", chip, core);
 
     //access the partition of the SDRAM where input data is stored
@@ -65,47 +120,40 @@ void record_data() {
     address_t data_address =
         data_specification_get_region(INPUT_DATA, address);
 
-    //build the data entry from the memory addresses provided (here 1 - 16)
-    int i = 0;
-    for(i = 0; i < 16; i++){
-      if(i > 0){
-    	  log_info("Address: %d", &data_address[i]);
-      }
+ /* get the header data -
+  * the global header struct provides
+  * enough information to retrieve any entry
+  * at any point in time anywhere from SDRAM
+  */
+
+    header.num_cols    = *(&data_address[0]);
+	header.num_rows    = *(&data_address[1]);
+	header.string_size = *(&data_address[2]);
+	header.flag        = *(&data_address[3]);
+
+	//log this information to iobuf
+	log_info("Num_cols: %d", header.num_cols );
+	log_info("Num_rows: %d", header.num_rows);
+	log_info("string_size: %d", header.string_size);
+	log_info("flag : %d", header.flag);
+
+}
+
+void record_data() {
+
+    //access the partition of the SDRAM where input data is stored
+    address_t address = data_specification_get_data_address();
+    address_t data_address =
+        data_specification_get_region(INPUT_DATA, address);
+
+    unsigned int i = 0;
+    unsigned int entry1[4];
+    for(i = 4; i < 8; i++){
+    	entry1[i-4] = *(&data_address[i]);
     }
-    for(i = 0; i < 16; i++){
-      log_info("Value: %d", *(&data_address[i]));
-      if(i > 0){
-        strcat(&data_address[0],&data_address[i]);
-      }
-    }
-
-    char *entry1 = &data_address[0];
-
-    for(i = 16; i < 32; i++){
-      if(i > 16){
-        strcat(&data_address[16],&data_address[i]);
-      }
-    }
-
-    char *entry2 = &data_address[16];
-
-    //log the data entry
-    log_info("Entry is: %s", entry1);
-    log_info("Entry is: %s", entry2); //32 bytes allocates so far! -> 32*4 = 128 in python
 
     //record the data entry in the first recording region (which is OUTPUT)
-    bool recorded1 = recording_record(
-      0, entry1, 16 * sizeof(char));
-
-    bool recorded2 = recording_record(
-      0, entry2, 16 * sizeof(char));
-
-    if (recorded1) {
-        log_info("Vertex data recorded successfully!");
-    } else {
-        log_info("Vertex was not recorded...");
-    }
-
+    record_string_entry(entry1);
 }
 
 //! \brief Initialises the recording parts of the model
@@ -158,8 +206,9 @@ void update(uint ticks, uint b) {
     }
 
     if (time == 1) {
+    	retrieve_data();
         record_data();
-    } else if (time ==  100) {
+    } else if (time == 100) {
         iobuf_data();
     }
 

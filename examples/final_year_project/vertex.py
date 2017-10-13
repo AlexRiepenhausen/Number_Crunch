@@ -18,7 +18,8 @@ from spinn_front_end_common.utilities.utility_objs import ExecutableStartType
 from enum import Enum
 import logging
 
-from utilities import string_to_ascii_arr
+from utilities import convert_string_to_integer_parcel
+from utilities import _32intarray_to_int
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ class Vertex(
 
     CORE_APP_IDENTIFIER = 0xBEEF
 
-    def __init__(self, label, entry, value, constraints=None):
+    def __init__(self, label, columns, rows, string_size, flag, entries, constraints=None):
         MachineVertex.__init__(self, label=label, constraints=constraints)
 
         config = globals_variables.get_simulator().config
@@ -50,11 +51,18 @@ class Vertex(
         self._receive_buffer_port = helpful_functions.read_config_int(
             config, "Buffers", "receive_buffer_port")
 
-        self.entry = entry
-        self.value = value
+        '''
+        all the data that will be transfered to the vertex'''
+        self.columns     = columns
+        self.rows        = rows
+        self.string_size = string_size
+        self.flag        = flag
+        self.entries     = entries
 
-        self._input_data_size = 128
-        self._output_data_size = 128
+        '''
+        allocate space for entries and 16 bytes for the 4 integers that make up the header information'''
+        self._input_data_size  = (string_size * rows) + 16
+        self._output_data_size = (string_size * rows) + 16
 
         self.placement = None
 
@@ -92,7 +100,7 @@ class Vertex(
         # Reserve SDRAM space for memory areas:
         self._reserve_memory_regions(spec, setup_size)
 
-        # write data for the simulation data item
+        # set up the SYSTEM partition
         spec.switch_write_focus(self.DATA_REGIONS.SYSTEM.value)
         spec.write_array(simulation_utilities.get_simulation_header_array(
             self.get_binary_file_name(), machine_time_step,
@@ -106,8 +114,29 @@ class Vertex(
         
         # input data region
         spec.switch_write_focus(self.DATA_REGIONS.INPUT_DATA.value)
-        spec.write_array(string_to_ascii_arr(self.entry[0], 16))
-        spec.write_array(string_to_ascii_arr(self.entry[1], 16))  
+        
+        #write header information - 16bytes of information  
+        spec.write_array([self.columns, 
+                          self.rows,
+                          self.string_size,
+                          _32intarray_to_int(self.flag)])
+        
+        #NOTE: self.flag is converted to a 32-bit integer from the string/integer data representation (array of 0 and 1)
+        
+        #write the data entries
+        for i in range (0,self.columns):
+            
+            #if this column holds string data
+            if self.flag[i] == 0:         
+                for j in range (0, self.rows):
+                    spec.write_array(
+                                     convert_string_to_integer_parcel(self.entries[i][j],  #-> entry converted to integers
+                                                                      self.string_size)) #-> number of integers used for string
+            #if this column holds integer data
+            if self.flag[i] == 1:
+                for k in range (0, self.rows):
+                    spec.write_array(self.entries[i][k]) #-> those are 32-bit integers by default
+                          
 
         # End-of-Spec:
         spec.end_specification()
@@ -138,11 +167,12 @@ class Vertex(
         """
         data_pointer, missing_data = buffer_manager.get_data_for_vertex(
             placement, 0)
+        
         if missing_data:
             raise Exception("missing data!")
         record_raw = data_pointer.read_all()
         output = str(record_raw)
-        return output
+        return record_raw
 
     def get_minimum_buffer_sdram_usage(self):
         return self._input_data_size + self._output_data_size

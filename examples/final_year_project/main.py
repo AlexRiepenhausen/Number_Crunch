@@ -15,6 +15,7 @@ make
 
 from parser import parser
 from vertex import Vertex
+from utilities import convert_integer_parcel_to_string
 
 import spinnaker_graph_front_end as front_end
 import logging
@@ -22,7 +23,7 @@ import os
 
 '''-----------------------------------------------------------------------------------------------------'''
 
-def load_data_onto_spinnaker(total_number_of_cores, data):
+def load_data_onto_vertices(total_number_of_cores, data):
     
     data_len = len(data) -1
     
@@ -31,8 +32,11 @@ def load_data_onto_spinnaker(total_number_of_cores, data):
             front_end.add_machine_vertex(
                  Vertex,
                  {
-                  "entry": [data[x][0],data[x][0]],
-                  "value": [123]
+                  "columns":     1,
+                  "rows":        2,
+                  "string_size": 16,
+                  "flag":        [0], #0-string, 1-integer
+                  "entries":     [[data[x][0],data[x][0]]]
                  },
             label="Data packet at x {}".format(x))   
         
@@ -58,12 +62,13 @@ determine the data volume each core should take'''
 total_number_of_items = len(raw_data) - 1
 volume_per_core = total_number_of_items/total_number_of_cores
 
-load_data_onto_spinnaker(total_number_of_cores, raw_data)
+load_data_onto_vertices(total_number_of_cores, raw_data)
 
 front_end.run(2)
 
 placements = front_end.placements()
 buffer_manager = front_end.buffer_manager()
+
 
 for placement in sorted(placements.placements,
                         key=lambda p: (p.x, p.y, p.p)):
@@ -72,5 +77,6 @@ for placement in sorted(placements.placements,
         result = placement.vertex.read(placement, buffer_manager)
         logger.info("{}, {}, {} > {}".format(
             placement.x, placement.y, placement.p, result))
+
 
 front_end.stop()
