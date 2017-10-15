@@ -15,7 +15,6 @@ make
 
 from parser import parser
 from vertex import Vertex
-from utilities import convert_integer_parcel_to_string
 
 import spinnaker_graph_front_end as front_end
 import logging
