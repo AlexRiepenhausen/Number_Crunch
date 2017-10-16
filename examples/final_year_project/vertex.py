@@ -18,11 +18,10 @@ from spinn_front_end_common.utilities.utility_objs import ExecutableStartType
 from enum import Enum
 import logging
 
-from utilities import convert_string_to_integer_parcel
-from utilities import _32intarray_to_int
-
 logger = logging.getLogger(__name__)
 
+from utilities.string_marshalling import _32intarray_to_int
+from utilities.string_marshalling import convert_string_to_integer_parcel
 
 class Vertex(
         MachineVertex, MachineDataSpecableVertex, AbstractHasAssociatedBinary,

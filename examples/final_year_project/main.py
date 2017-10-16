@@ -13,8 +13,8 @@ make
 
 '''-----------------------------------------------------------------------------------------------------'''
 
-from parser import parser
-from vertex import Vertex
+from utilities.parser import parser
+from vertex import Vertex 
 
 import spinnaker_graph_front_end as front_end
 import logging
@@ -24,9 +24,9 @@ import os
 
 def load_data_onto_vertices(total_number_of_cores, data):
     
-    data_len = len(data) -1
-    
-    for x in range(0, total_number_of_cores):
+    data_len = len(data)
+    #vertices = []
+    for x in range(1, total_number_of_cores):
         if x < data_len:
             front_end.add_machine_vertex(
                  Vertex,
@@ -37,7 +37,11 @@ def load_data_onto_vertices(total_number_of_cores, data):
                   "flag":        [0], #0-string, 1-integer
                   "entries":     [[data[x][0],data[x][0]]]
                  },
-            label="Data packet at x {}".format(x))   
+            label="Data packet at x {}".format(x))
+            
+            #vertices.append(current_vertex)   
+            
+    #make_ring(vertices, len(vertices))
         
 '''-----------------------------------------------------------------------------------------------------'''
         
