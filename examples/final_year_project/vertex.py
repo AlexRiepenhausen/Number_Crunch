@@ -1,3 +1,4 @@
+
 from pacman.model.decorators import overrides
 from pacman.model.graphs.machine import MachineVertex
 from pacman.model.resources import CPUCyclesPerTickResource, DTCMResource
@@ -31,7 +32,8 @@ class Vertex(
         value="DATA_REGIONS",
         names=[('SYSTEM', 0),
                ('INPUT_DATA', 1),
-               ('OUTPUT_DATA', 2)])
+               ('OUTPUT_DATA', 2),
+               ('TRANSMISSIONS', 3)])
 
     CORE_APP_IDENTIFIER = 0xBEEF
 
@@ -135,7 +137,9 @@ class Vertex(
             if self.flag[i] == 1:
                 for k in range (0, self.rows):
                     spec.write_array(self.entries[i][k]) #-> those are 32-bit integers by default
-                          
+         
+        # store edge related information           
+        spec.switch_write_focus(self.DATA_REGIONS.TRANSMISSIONS.value)         
 
         # End-of-Spec:
         spec.end_specification()
@@ -159,7 +163,6 @@ class Vertex(
 
     def read(self, placement, buffer_manager):
         """ Get the data written into sdram
-
         :param placement: the location of this vertex
         :param buffer_manager: the buffer manager
         :return: string output

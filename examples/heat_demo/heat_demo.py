@@ -27,7 +27,6 @@ from collections import defaultdict
 import sys
 from threading import Condition
 
-
 # Script borken Suspected reinjector problem
 def run_broken():
     machine_time_step = 1000

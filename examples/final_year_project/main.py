@@ -13,6 +13,7 @@ make
 
 '''-----------------------------------------------------------------------------------------------------'''
 
+from edges.circle import make_circle
 from utilities.parser import parser
 from vertex import Vertex 
 
@@ -25,10 +26,10 @@ import os
 def load_data_onto_vertices(total_number_of_cores, data):
     
     data_len = len(data)
-    #vertices = []
+    vertices = []
     for x in range(1, total_number_of_cores):
         if x < data_len:
-            front_end.add_machine_vertex(
+            current_vertex = front_end.add_machine_vertex(
                  Vertex,
                  {
                   "columns":     1,
@@ -39,9 +40,9 @@ def load_data_onto_vertices(total_number_of_cores, data):
                  },
             label="Data packet at x {}".format(x))
             
-            #vertices.append(current_vertex)   
+            vertices.append(current_vertex)   
             
-    #make_ring(vertices, len(vertices))
+    make_circle(vertices, len(vertices))
         
 '''-----------------------------------------------------------------------------------------------------'''
         
