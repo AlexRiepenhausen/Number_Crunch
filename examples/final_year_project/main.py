@@ -28,7 +28,7 @@ def load_data_onto_vertices(total_number_of_cores, data):
     data_len = len(data)
     vertices = []
     for x in range(1, total_number_of_cores):
-        if x < data_len:
+        if x < data_len:                       
             current_vertex = front_end.add_machine_vertex(
                  Vertex,
                  {
@@ -36,13 +36,14 @@ def load_data_onto_vertices(total_number_of_cores, data):
                   "rows":        2,
                   "string_size": 16,
                   "flag":        [0], #0-string, 1-integer
-                  "entries":     [[data[x][0],data[x][0]]]
+                  "entries":     [[data[x][0],data[x][0]]],
+                  "state":       x
                  },
-            label="Data packet at x {}".format(x))
+                 label="Data packet at x {}".format(x))
             
             vertices.append(current_vertex)   
             
-    make_circle(vertices, len(vertices))
+    make_circle(vertices, len(vertices), front_end)
         
 '''-----------------------------------------------------------------------------------------------------'''
         

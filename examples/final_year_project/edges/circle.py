@@ -17,11 +17,9 @@ def make_circle: Builds this cluster within a chip
 
 '''
 
-import spinnaker_graph_front_end as front_end
 from circle_edge import CircleEdge
 
-
-def make_circle(vertices, list_size):
+def make_circle(vertices, list_size, front_end):
     
     first_vertex_index   =  0   #first index in cluster    
     central_vertex_index = 15   #final and central index in cluster   
