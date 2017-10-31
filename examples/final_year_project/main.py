@@ -28,7 +28,13 @@ def load_data_onto_vertices(total_number_of_cores, data):
     data_len = len(data)
     vertices = []
     for x in range(1, total_number_of_cores):
-        if x < data_len:                       
+        if x < data_len:  
+            
+            #initiate if this is the first vertex in the circle
+            initiate = 0
+            if x%16 == 0:
+                initiate = 1
+                                 
             current_vertex = front_end.add_machine_vertex(
                  Vertex,
                  {
@@ -37,6 +43,7 @@ def load_data_onto_vertices(total_number_of_cores, data):
                   "string_size": 16,
                   "flag":        [0], #0-string, 1-integer
                   "entries":     [[data[x][0],data[x][0]]],
+                  "initiate":    initiate,
                   "state":       x
                  },
                  label="Data packet at x {}".format(x))
@@ -69,7 +76,7 @@ volume_per_core = total_number_of_items/total_number_of_cores
 
 load_data_onto_vertices(total_number_of_cores, raw_data)
 
-front_end.run(2)
+front_end.run(99)
 
 placements = front_end.placements()
 buffer_manager = front_end.buffer_manager()

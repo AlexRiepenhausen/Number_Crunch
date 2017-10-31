@@ -47,7 +47,7 @@ class Vertex(
 
     CORE_APP_IDENTIFIER = 0xBEEF
 
-    def __init__(self, label, columns, rows, string_size, flag, entries, state, constraints=None):
+    def __init__(self, label, columns, rows, string_size, flag, entries, initiate, state, constraints=None):
         MachineVertex.__init__(self, label=label, constraints=constraints)
 
         config = globals_variables.get_simulator().config
@@ -67,13 +67,14 @@ class Vertex(
         self.columns     = columns
         self.rows        = rows
         self.string_size = string_size
-        self.flag        = flag #32bits where each bit is either 1 or 0 -> 1 representing a string value for a column, 0 an integer
+        self.flag        = flag #32bits where each bit is either 1 or 0 -> 0 representing a string value for a column, 1 an integer
         self.entries     = entries 
+        self.initiate    = initiate
 
         '''
-        allocate space for entries and 16 bytes for the 4 integers that make up the header information'''
-        self._input_data_size  = (string_size * rows) + 16
-        self._output_data_size = (string_size * rows) + 16
+        allocate space for entries and 16 bytes for the 5 integers that make up the header information'''
+        self._input_data_size  = (string_size * rows) + 20
+        self._output_data_size = (string_size * rows) + 20
 
         # app specific elements
         self.placement = None
@@ -115,7 +116,8 @@ class Vertex(
         spec.write_array([self.columns, 
                           self.rows,
                           self.string_size,
-                          _32intarray_to_int(self.flag)])
+                          _32intarray_to_int(self.flag),
+                          self.initiate])
         
         #NOTE: self.flag is converted to a 32-bit integer from the string/integer data representation (array of 0 and 1)
         
@@ -126,8 +128,8 @@ class Vertex(
             if self.flag[i] == 0:         
                 for j in range (0, self.rows):
                     spec.write_array(
-                                     convert_string_to_integer_parcel(self.entries[i][j],  #-> entry converted to integers
-                                                                      self.string_size)) #-> number of integers used for string
+                                     convert_string_to_integer_parcel(self.entries[i][j], #-> entry converted to integers
+                                                                      self.string_size))  #-> number of integers used for string
             #if this column holds integer data
             if self.flag[i] == 1:
                 for k in range (0, self.rows):
@@ -175,7 +177,7 @@ class Vertex(
         #write the key to the designated region
         #0 -> key does not exist, 1 -> key exists
         if key is None:
-            spec.write_value(0) 
+            spec.write_value(0)  #for some reason key is None
             spec.write_value(0)
         else:
             spec.write_value(1) 
