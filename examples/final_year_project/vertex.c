@@ -97,14 +97,19 @@ struct header_info {
 
 struct header_info header;
 
+unsigned int *id_index;
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // FUNCTION REFERENCES                                                                           //                                                                  //
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 void resume_callback();
 void iobuf_data();
+unsigned int compare_two_strings(unsigned int *string_1, unsigned int *string_2);
 
 void start_processing();
+void build_id_index();
+void unique_id_function_start();
 void count_function_start();
 void count_function_receive(uint payload);
 
@@ -141,6 +146,21 @@ void iobuf_data(){
     log_info("Data read is: %s", my_string);
 }
 
+unsigned int compare_two_strings(unsigned int *string_1, unsigned int *string_2) {
+
+    //compares two strings with each other
+	//return 1
+	//return 0 if not
+
+    unsigned int i;
+    for(i = 0; i < header.string_size/4; i++){
+      if(string_1[i] != string_2[i]){return 0;}
+    }
+
+	return 1;
+
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // MAIN COMPONENTS OF QUERY PROCESSING ALGORITHMS                                                //
 // START_PROCESSING                                                                              //
@@ -150,10 +170,121 @@ void start_processing() {
 
 	switch(header.function_id) {
 		case 1 :
+			 build_id_index();
 	         count_function_start();
 	         break;
+		case 2 :
+			 unique_id_function_start();
+			 break;
 	    default :
 	    	log_info("No function selected");
+	}
+
+}
+
+void unique_id_function_start() {
+
+	//take every column of strings and assign an unique id to each string
+    address_t address = data_specification_get_data_address();
+    address_t data_address =
+        data_specification_get_region(INPUT_DATA, address);
+
+	//make sure any non-integer entries do exist
+	if(header.num_string_cols != 0 && header.num_rows != 0) {
+
+		//read the first single entry
+	    unsigned int i = 0;
+	    unsigned int entry[4];
+	    for(i = 6; i < 10; i++){
+	    	entry[i-6] = *(&data_address[i]);
+	    }
+
+		//send the first data entry to the next core - 4 spikes
+		send_state(entry[0], 1);
+		send_state(entry[1], 1);
+		send_state(entry[2], 1);
+		send_state(entry[3], 1);
+
+	}
+
+}
+
+void build_id_index() {
+
+	//take every column of strings and assign an unique id to each string
+    address_t address = data_specification_get_data_address();
+    address_t data_address =
+        data_specification_get_region(INPUT_DATA, address);
+
+	id_index = malloc(sizeof(unsigned int) * header.num_rows);
+
+	unsigned int unique_id = 1;
+
+	//make sure any non-integer entries do exist
+	if(header.num_string_cols != 0 && header.num_rows != 0) {
+
+		//read the first single entry
+		unsigned int i = 0;
+	    unsigned int j = 0;
+
+	    unsigned int current_entry[4];
+
+	    for(i = 0; i < header.num_rows; i++) {
+
+	    	unsigned int start = 6  + 4*i;
+	    	unsigned int end   = 10 + 4*i;
+	    	unsigned int count = 0;
+
+	    	//current entry
+		    for(j = start; j < end; j++) {
+		    	current_entry[count] = *(&data_address[j]);
+		    	count++;
+		    }
+
+		    //check if entry exists in the already assigned region
+		    //Since the number of entries on one core is always limited, this is fine
+
+            unsigned int k = 0;
+            unsigned int l = 0;
+
+            unsigned int signed_flag = 0;
+
+            unsigned int past_entry[4];
+
+            for(k = 0; k < i; k++){
+
+    	    	unsigned int start2 = 6  + 4*k;
+    	    	unsigned int end2   = 10 + 4*k;
+    	    	unsigned int count2 = 0;
+
+    	    	//past entry
+    		    for(l = start2; l < end2; l++) {
+    		    	past_entry[count2] = *(&data_address[l]);
+    		    	count2++;
+    		    }
+
+    		    if(compare_two_strings(past_entry,current_entry) == 1) {
+    		        id_index[i] = id_index[k];
+                    log_info("Unique id assigned: %d", unique_id);
+                    log_info("Entry: %d", past_entry[0]);
+                    log_info("Entry: %d", current_entry[0]);
+    		        signed_flag = 1;
+                    break;
+    		    }
+
+            }
+
+            //if no index assigned yet - that is the entry has not been spotted:
+            if(signed_flag == 0){
+            	id_index[i] = unique_id;
+                log_info("Unique id assigned: %d", unique_id);
+                log_info("Entry: %d", past_entry[0]);
+                log_info("Entry: %d", current_entry[0]);
+            	unique_id++;
+            }
+
+	    }
+
 	}
 
 }
@@ -165,7 +296,7 @@ void count_function_start() {
 
 	//send the first MCPL package if initiate is TRUE
 	if(header.initiate_send == 1){
-		log_info("SOLUTION : %d", header.num_rows);
+		log_info("solution: %d", header.num_rows);
 		record_int_entry(header.num_rows);
 		send_state(header.num_rows, 1);
 	}
@@ -179,7 +310,7 @@ void count_function_receive(uint payload) {
 	if(header.initiate_send == 0){
 		payload = payload + header.num_rows;
 		send_state(payload, 1);
-		log_info("SOLUTION : %d", payload);
+		log_info("solution: %d", payload);
 		record_int_entry(payload);
 	}
 
@@ -197,8 +328,6 @@ void send_state(uint payload, uint delay) {
     dead_states_recieved_this_tick = 0;
 
     // send my new state to the simulation neighbours
-    log_debug("sending my state of %d via multicast with key %d",
-              my_state, my_key);
     while (!spin1_send_mc_packet(my_key, payload, WITH_PAYLOAD)) {
         spin1_delay_us(delay);
     }
