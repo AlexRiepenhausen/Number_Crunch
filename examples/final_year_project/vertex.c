@@ -12,7 +12,6 @@ uint my_key;
 
 /*! buffer used to store spikes */
 static circular_buffer input_buffer;
-static uint32_t current_payload;
 
 //! Variables representing state
 uint32_t my_state = 0;
@@ -61,7 +60,10 @@ typedef enum initial_state_region_elements {
     INITIAL_STATE
 } initial_state_region_elements;
 
-//global variables holding the data pointers
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// GLOBAL HEADER INFO - contains information on the structure of data within vertex              //
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
 struct header_info {
 
    unsigned int num_cols;
@@ -76,26 +78,119 @@ struct header_info {
    /* number of bytes that
     * are allocated for each individual string
     */
-   unsigned int flag;
-   /* flag has 32bits
-    * each bit can be 0 or 1
-    * 0 stands for string data
-    * 1 stands for integer data
-    * Example: if the first bit is 0,
-    *          the first columns holds string data
-    * Warning: There should be no more than 32 columns
+   unsigned int num_string_cols;
+   /* Tells you the number of string columns
+    * All string columns SHOULD be written to SDRAM first (from python) -
+    * then and only then the integer columns
     */
    unsigned int initiate_send;
    /* if 1, vertex will be the first one to send out spike
     * if 0, vertex will wait until spike received
     */
+   unsigned int function_id;
+   /* holds id of function to be invoked
+    * 0 - None
+    * 1 - Count number of all data entries within the graph
+    */
 
 };
 
-//Holds header information globally
 struct header_info header;
 
-void send_state() {
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// FUNCTION REFERENCES                                                                           //                                                                  //
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+void resume_callback();
+void iobuf_data();
+
+void start_processing();
+void count_function_start();
+void count_function_receive(uint payload);
+
+void send_state(uint payload, uint delay);
+void receive_data(uint key, uint payload);
+
+void retrieve_header_data();
+void record_solution();
+void record_string_entry(unsigned int *int_arr);
+void record_int_entry(unsigned int solution);
+
+void update(uint ticks, uint b);
+static bool initialise_recording();
+static bool initialize(uint32_t *timer_period);
+void c_main();
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// UTILITY FUNCTIONS                                                                             //
+// RESUME_CALLBACK, IOBUF_DATA                                                                   //
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+void resume_callback() {
+    time = UINT32_MAX;
+}
+
+void iobuf_data(){
+    address_t address = data_specification_get_data_address();
+    address_t data_address =
+        data_specification_get_region(INPUT_DATA, address);
+
+    log_info("Data address is %08x", data_address);
+
+    int* my_string = (int *) &data_address[0];
+    log_info("Data read is: %s", my_string);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// MAIN COMPONENTS OF QUERY PROCESSING ALGORITHMS                                                //
+// START_PROCESSING                                                                              //
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+void start_processing() {
+
+	switch(header.function_id) {
+		case 1 :
+	         count_function_start();
+	         break;
+	    default :
+	    	log_info("No function selected");
+	}
+
+}
+
+void count_function_start() {
+
+	//counts all data entries within the graph
+	//the current implementation relies upon a ring structure
+
+	//send the first MCPL package if initiate is TRUE
+	if(header.initiate_send == 1){
+		log_info("SOLUTION : %d", header.num_rows);
+		record_int_entry(header.num_rows);
+		send_state(header.num_rows, 1);
+	}
+
+}
+
+void count_function_receive(uint payload) {
+    //forward the message to the next vertex (ring)
+
+	//if we have reached the original vertex, stop the entire mechanism
+	if(header.initiate_send == 0){
+		payload = payload + header.num_rows;
+		send_state(payload, 1);
+		log_info("SOLUTION : %d", payload);
+		record_int_entry(payload);
+	}
+
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// DATA TRANSFER BETWEEN CORES                                                                   //
+// SEND_STATE, RECEIVE_DATA                                                                      //
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+void send_state(uint payload, uint delay) {
 
     // reset for next iteration
     alive_states_recieved_this_tick = 0;
@@ -104,8 +199,8 @@ void send_state() {
     // send my new state to the simulation neighbours
     log_debug("sending my state of %d via multicast with key %d",
               my_state, my_key);
-    while (!spin1_send_mc_packet(my_key, my_state, WITH_PAYLOAD)) {
-        spin1_delay_us(1);
+    while (!spin1_send_mc_packet(my_key, payload, WITH_PAYLOAD)) {
+        spin1_delay_us(delay);
     }
 
     log_debug("sent my state via multicast");
@@ -125,20 +220,69 @@ void receive_data(uint key, uint payload) {
        log_info("Could not add state");
    }
 
-   //forward the message to the next vertex (ring)
-   send_state();
+   //depending on the function, select a way to handle the incoming message
+   switch(header.function_id) {
+		case 1 :
+			 count_function_receive(payload);
+	         break;
+	    default :
+	    	log_info("No function selected");
+	}
 
 }
 
-void iobuf_data(){
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// VERTEX INTERNAL DATA MANAGEMENT                                                               //
+// RETRIEVE_DATA, RECORD_DATA, RECORD_STRING_ENTRY, RECORD_INT_ENTRY                             //
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+void retrieve_header_data(){
+
+    uint chip = spin1_get_chip_id();
+    uint core = spin1_get_core_id();
+    log_info("Issuing 'Vertex' from chip %d, core %d", chip, core);
+
+    //access the partition of the SDRAM where input data is stored
     address_t address = data_specification_get_data_address();
     address_t data_address =
         data_specification_get_region(INPUT_DATA, address);
 
-    log_info("Data address is %08x", data_address);
+    //header data that contains:
+    //- The data description
+    //- Processing instructions
+    header.num_cols        = data_address[0];
+	header.num_rows        = data_address[1];
+	header.string_size     = data_address[2];
+	header.num_string_cols = data_address[3];
+	header.initiate_send   = data_address[4];
+	header.function_id     = data_address[5];
 
-    int* my_string = (int *) &data_address[0];
-    log_info("Data read is: %s", my_string);
+	//log this information to iobuf
+	log_info("Num_cols: %d", header.num_cols );
+	log_info("Num_rows: %d", header.num_rows);
+	log_info("string_size: %d", header.string_size);
+	log_info("flag : %d", header.num_string_cols);
+	log_info("initate_send : %d", header.initiate_send);
+	log_info("function_id: %d", header.initiate_send);
+
+}
+
+void record_solution() {
+
+    //access the partition of the SDRAM where input data is stored
+    address_t address = data_specification_get_data_address();
+    address_t data_address =
+        data_specification_get_region(INPUT_DATA, address);
+
+    unsigned int i = 0;
+    unsigned int entry1[4];
+    for(i = 6; i < 10; i++){
+    	entry1[i-6] = *(&data_address[i]);
+    }
+
+    //record the data entry in the first recording region (which is OUTPUT)
+    record_string_entry(entry1);
+
 }
 
 void record_string_entry(unsigned int *int_arr) {
@@ -169,85 +313,26 @@ void record_string_entry(unsigned int *int_arr) {
 
 }
 
-void retrieve_data(){
+void record_int_entry(unsigned int solution) {
 
-    log_info("Retrieving data...");
-    uint chip = spin1_get_chip_id();
-    uint core = spin1_get_core_id();
-    log_info("Issuing 'Vertex' from chip %d, core %d", chip, core);
+	char result[16];
+	itoa(solution,result,10);
 
-    //access the partition of the SDRAM where input data is stored
-    address_t address = data_specification_get_data_address();
-    address_t data_address =
-        data_specification_get_region(INPUT_DATA, address);
+    bool recorded = recording_record(0, result, header.string_size * sizeof(unsigned char));
 
- /* get the header data -
-  * the global header struct provides
-  * enough information to retrieve any entry
-  * at any point in time anywhere from SDRAM
-  */
-
-    header.num_cols      = data_address[0];
-	header.num_rows      = data_address[1];
-	header.string_size   = data_address[2];
-	header.flag          = data_address[3];
-	header.initiate_send = data_address[4];
-
-	//log this information to iobuf
-	log_info("Num_cols: %d", header.num_cols );
-	log_info("Num_rows: %d", header.num_rows);
-	log_info("string_size: %d", header.string_size);
-	log_info("flag : %d", header.flag);
-	log_info("initate_send : %d", header.initiate_send);
-
-	//send the first MCPL package if initiate is TRUE
-	if(header.initiate_send == 1){
-		send_state();
-	}
-
-}
-
-void record_data() {
-
-    //access the partition of the SDRAM where input data is stored
-    address_t address = data_specification_get_data_address();
-    address_t data_address =
-        data_specification_get_region(INPUT_DATA, address);
-
-    unsigned int i = 0;
-    unsigned int entry1[4];
-    for(i = 5; i < 9; i++){
-    	entry1[i-5] = *(&data_address[i]);
+    if (recorded) {
+        log_info("Integer solution recorded successfully");
+    } else {
+        log_info("Integer solution was not recorded...");
     }
 
-    //record the data entry in the first recording region (which is OUTPUT)
-    record_string_entry(entry1);
 }
 
-//! \brief Initialises the recording parts of the model
-//! \return True if recording initialisation is successful, false otherwise
-static bool initialise_recording(){
-    address_t address = data_specification_get_data_address();
-    address_t recording_region = data_specification_get_region(
-        OUTPUT_DATA, address);
-    bool success = recording_initialize(recording_region, &recording_flags);
-    log_info("Recording flags = 0x%08x", recording_flags);
-    return success;
-}
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// FUNCTIONS THAT CONSTITUTE THE MAIN BUILDING BLOCKS OF THE VERTEX:                             //
+// UPDATE, INITIALIZE, INITIALIZE_RECORDING, C_MAIN                                              //
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void resume_callback() {
-    time = UINT32_MAX;
-}
-
-/****f*
- *
- * SUMMARY
- *
- * SYNOPSIS
- *  void update (uint ticks, uint b)
- *
- * SOURCE
- */
 void update(uint ticks, uint b) {
     use(b);
     use(ticks);
@@ -256,8 +341,7 @@ void update(uint ticks, uint b) {
 
     log_info("on tick %d of %d", time, simulation_ticks);
 
-    // check that the run time hasn't already elapsed and thus needs to be
-    // killed
+    // check that the run time hasn't already elapsed and thus needs to be killed
     if ((infinite_run != TRUE) && (time >= simulation_ticks)) {
         log_info("Simulation complete.\n");
 
@@ -274,8 +358,8 @@ void update(uint ticks, uint b) {
     }
 
     if (time == 1) {
-    	retrieve_data();
-        record_data();
+    	retrieve_header_data();
+    	start_processing();
     } else if (time == 100) {
         iobuf_data();
     }
@@ -289,8 +373,21 @@ void update(uint ticks, uint b) {
     }
 }
 
+static bool initialise_recording(){
+
+	//! \brief Initialises the recording parts of the model
+	//! \return True if recording initialisation is successful, false otherwise
+
+    address_t address = data_specification_get_data_address();
+    address_t recording_region = data_specification_get_region(
+        OUTPUT_DATA, address);
+    bool success = recording_initialize(recording_region, &recording_flags);
+    log_info("Recording flags = 0x%08x", recording_flags);
+    return success;
+
+}
+
 static bool initialize(uint32_t *timer_period) {
-    log_info("Initialise: started\n");
 
     // Get the address this core's DTCM data starts at from SRAM
     address_t address = data_specification_get_data_address();
@@ -343,18 +440,6 @@ static bool initialize(uint32_t *timer_period) {
 
     return true;
 }
-
-/****f*
- *
- * SUMMARY
- *  This function is called at application start-up.
- *  It is used to register event callbacks and begin the simulation.
- *
- * SYNOPSIS
- *  int c_main()
- *
- * SOURCE
- */
 
 void c_main() {
 

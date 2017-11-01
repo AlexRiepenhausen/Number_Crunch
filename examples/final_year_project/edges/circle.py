@@ -18,6 +18,8 @@ def make_circle: Builds this cluster within a chip
 '''
 
 from circle_edge import CircleEdge
+from enum import Enum
+from pacman.model.graphs.machine import MachineEdge
 
 def make_circle(vertices, list_size, front_end):
     
@@ -30,8 +32,8 @@ def make_circle(vertices, list_size, front_end):
             
             #before you reach the final core
             if x%16 < 15:
-            
                 #connect to other cluster vertex
+                '''
                 front_end.add_machine_edge(
                     CircleEdge,
                     {
@@ -40,11 +42,16 @@ def make_circle(vertices, list_size, front_end):
                         'direction':   CircleEdge.DIRECTIONS.NEXT
                     },
                     label="ClusterToCluster",
-                    semantic_label="TRANSMISSION")
-            
+                    semantic_label="TRANSMISSION")'''
+                
+                front_end.add_machine_edge_instance(
+                MachineEdge(
+                    vertices[x], vertices[x+1],
+                    label=(x%16)), vertices[x].PARTITION_ID)
+
             #close the circle
             if x%16 == 15: 
-                
+                '''
                 front_end.add_machine_edge(
                     CircleEdge,
                     {
@@ -53,8 +60,13 @@ def make_circle(vertices, list_size, front_end):
                         'direction':   CircleEdge.DIRECTIONS.NEXT
                     },
                     label="ClusterToCluster",
-                    semantic_label="TRANSMISSION")
+                    semantic_label="TRANSMISSION")'''
                 
+                front_end.add_machine_edge_instance(
+                MachineEdge(
+                    vertices[x], vertices[first_vertex_index],
+                    label=(x%16)), vertices[x].PARTITION_ID)
+
                 first_vertex_index  =  central_vertex_index +  1
                 central_vertex_index = first_vertex_index   + 15              
            

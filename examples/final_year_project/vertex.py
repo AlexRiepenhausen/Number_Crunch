@@ -47,7 +47,7 @@ class Vertex(
 
     CORE_APP_IDENTIFIER = 0xBEEF
 
-    def __init__(self, label, columns, rows, string_size, flag, entries, initiate, state, constraints=None):
+    def __init__(self, label, columns, rows, string_size, num_string_cols, entries, initiate, function_id, state, constraints=None):
         MachineVertex.__init__(self, label=label, constraints=constraints)
 
         config = globals_variables.get_simulator().config
@@ -64,17 +64,19 @@ class Vertex(
 
         '''
         all the data that will be transfered to the vertex'''
-        self.columns     = columns
-        self.rows        = rows
-        self.string_size = string_size
-        self.flag        = flag #32bits where each bit is either 1 or 0 -> 0 representing a string value for a column, 1 an integer
-        self.entries     = entries 
-        self.initiate    = initiate
+        self.columns         = columns
+        self.rows            = rows
+        self.string_size     = string_size
+        self.num_string_cols = num_string_cols 
+        self.entries         = entries 
+        self.initiate        = initiate
+        self.function_id     = function_id
 
         '''
-        allocate space for entries and 16 bytes for the 5 integers that make up the header information'''
-        self._input_data_size  = (string_size * rows) + 20
-        self._output_data_size = (string_size * rows) + 20
+        allocate space for entries and 24 bytes for the 6 integers that make up the header information'''
+        self._input_data_size  = (string_size * rows * num_string_cols) + \
+                                 (4           * rows * (columns - num_string_cols)) + 24
+        self._output_data_size = string_size 
 
         # app specific elements
         self.placement = None
@@ -116,24 +118,21 @@ class Vertex(
         spec.write_array([self.columns, 
                           self.rows,
                           self.string_size,
-                          _32intarray_to_int(self.flag),
-                          self.initiate])
+                          self.num_string_cols,
+                          self.initiate,
+                          self.function_id])   
         
-        #NOTE: self.flag is converted to a 32-bit integer from the string/integer data representation (array of 0 and 1)
-        
-        #write the data entries
-        for i in range (0,self.columns):
-            
-            #if this column holds string data
-            if self.flag[i] == 0:         
-                for j in range (0, self.rows):
-                    spec.write_array(
-                                     convert_string_to_integer_parcel(self.entries[i][j], #-> entry converted to integers
-                                                                      self.string_size))  #-> number of integers used for string
-            #if this column holds integer data
-            if self.flag[i] == 1:
-                for k in range (0, self.rows):
-                    spec.write_array(self.entries[i][k]) #-> those are 32-bit integers by default
+        #write the string data entries
+        for i in range (0, self.num_string_cols):
+            for j in range (0, self.rows):
+                spec.write_array(
+                                 convert_string_to_integer_parcel(self.entries[j][i], #-> entry converted to integers
+                                                                  self.string_size))  #-> number of integers used for string
+
+        #write the integer data entries
+        for i in range (self.num_string_cols, self.columns):
+            for k in range (0, self.rows):
+                spec.write_value(int(self.entries[k][i])) #-> those are 32-bit integers by default
                     
     def configure_edges(self,spec,routing_info,machine_graph):
         

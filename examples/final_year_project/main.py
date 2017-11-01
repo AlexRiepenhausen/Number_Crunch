@@ -15,6 +15,7 @@ make
 
 from edges.circle import make_circle
 from utilities.parser import parser
+from utilities.string_marshalling import anyBinaryToDecimal
 from vertex import Vertex 
 
 import spinnaker_graph_front_end as front_end
@@ -25,30 +26,32 @@ import os
 
 def load_data_onto_vertices(total_number_of_cores, data):
     
-    data_len = len(data)
+    #get rid of the headers
+    del data[0]
+
     vertices = []
-    for x in range(1, total_number_of_cores):
-        if x < data_len:  
+    for x in range(0, 16):
             
-            #initiate if this is the first vertex in the circle
-            initiate = 0
-            if x%16 == 0:
-                initiate = 1
+        #initiate if this is the first vertex in the circle
+        initiate = 0
+        if x%16 == 0:
+            initiate = 1
                                  
-            current_vertex = front_end.add_machine_vertex(
-                 Vertex,
-                 {
-                  "columns":     1,
-                  "rows":        2,
-                  "string_size": 16,
-                  "flag":        [0], #0-string, 1-integer
-                  "entries":     [[data[x][0],data[x][0]]],
-                  "initiate":    initiate,
-                  "state":       x
-                 },
-                 label="Data packet at x {}".format(x))
-            
-            vertices.append(current_vertex)   
+        current_vertex = front_end.add_machine_vertex(
+            Vertex,
+            {
+            "columns":         2,
+            "rows":            2,
+            "string_size":     16,
+            "num_string_cols": 1,
+            "entries":         [[data[x][0],data[x][1]],[data[x+16][0],data[x+16][1]]],
+            "initiate":        initiate,
+            "function_id":     1,
+            "state":           x
+            },
+            label="Data packet at x {}".format(x))   
+           
+        vertices.append(current_vertex)   
             
     make_circle(vertices, len(vertices), front_end)
         
@@ -76,7 +79,7 @@ volume_per_core = total_number_of_items/total_number_of_cores
 
 load_data_onto_vertices(total_number_of_cores, raw_data)
 
-front_end.run(99)
+front_end.run(20)
 
 placements = front_end.placements()
 buffer_manager = front_end.buffer_manager()

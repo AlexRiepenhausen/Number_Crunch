@@ -1,3 +1,13 @@
+'''Convert binary number to decimal'''
+def anyBinaryToDecimal(binary):
+    result = 0
+    counter = 1
+    for i in binary[:-1]: # Iterating through input in reverse order
+        result += int(i) * counter
+        counter =  counter*2
+
+    return result
+
 '''CONSTRUCTION ->'''
 '''Converts a 32bit integer to a bit array of size 8 - value supplied must be ascii representation, else space is returned (32)'''
 def _32int_to_8bitarray(number):
