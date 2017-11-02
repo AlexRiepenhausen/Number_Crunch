@@ -139,7 +139,6 @@ struct index_info {
 
 struct index_info local_index;
 
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // FUNCTION REFERENCES                                                                           //                                                                  //
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -147,11 +146,12 @@ struct index_info local_index;
 void resume_callback();
 void iobuf_data();
 unsigned int compare_two_strings(unsigned int *string_1, unsigned int *string_2);
+unsigned int find_first_instance_of(unsigned int given_id);
 
 void start_processing();
 void initialise_index();
 void update_index();
-void build_index_start();
+void build_index_start(unsigned int index);
 void build_index_receive();
 void build_index_message_reached_sender();
 
@@ -206,6 +206,20 @@ unsigned int compare_two_strings(unsigned int *string_1, unsigned int *string_2)
 
 }
 
+unsigned int find_first_instance_of(unsigned int given_id){
+
+	//finds the first data item with the given id and returns its index
+	unsigned int i;
+    for(i = 0; i < header.num_rows; i++) {
+    	if(local_index.id_index[i] == given_id){
+    		return i;
+    	}
+    }
+
+    return 0;
+
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // MAIN COMPONENTS OF QUERY PROCESSING ALGORITHMS                                                //
 // START_PROCESSING                                                                              //
@@ -219,7 +233,7 @@ void start_processing() {
 	         break;
 		case 2 :
 			 initialise_index();
-			 build_index_start();
+			 build_index_start(0); //0 refers to the very first string data entry
 			 break;
 	    default :
 	    	log_info("No function selected");
@@ -227,10 +241,10 @@ void start_processing() {
 
 }
 
-void build_index_start() {
+void build_index_start(unsigned int data_entry_position) {
 
-	//start if initiate is TRUE (or 1)
-	if(header.initiate_send == 1) {
+	//start if index is complete - this only happens with the leader vertex in the beginning
+	if(local_index.index_complete == 1) {
 
 		//take every column of strings and assign an unique id to each string
 	    address_t address = data_specification_get_data_address();
@@ -240,11 +254,17 @@ void build_index_start() {
 		//make sure any non-integer entries do exist
 		if(header.num_string_cols != 0 && header.num_rows != 0) {
 
-			//read the first single entry
-		    unsigned int i = 0;
-		    unsigned int entry[4];
-		    for(i = 6; i < 10; i++){
-		    	entry[i-6] = *(&data_address[i]);
+	    	unsigned int start = 6  + 4 * data_entry_position;
+	    	unsigned int end   = 10 + 4 * data_entry_position;
+	    	unsigned int count = 0;
+
+	    	unsigned int i;
+	    	unsigned int entry[4];
+
+	    	//current entry
+		    for(i = start; i < end; i++) {
+		    	entry[count] = *(&data_address[i]);
+		    	count++;
 		    }
 
 			//send the first data entry to the next core - 4 spikes
@@ -254,7 +274,7 @@ void build_index_start() {
 			send_state(entry[3], 1);
 
 			//send the id of that entry
-			send_state(local_index.id_index[0], 1);
+			send_state(local_index.id_index[data_entry_position], 1);
 
 		}
 
@@ -340,7 +360,9 @@ void initialise_index() {
 
 		    }
 
+		    //all data entries have a non zero index assigned to them
 		    local_index.max_index = unique_id;
+		    local_index.index_complete    = 1;
 
 		}
 		else {
@@ -365,8 +387,36 @@ void build_index_receive(uint payload) {
 	local_index.messages_received++;
 
 	if(local_index.messages_received % 5 == 0) {
+
 		local_index.message_id = payload;
-	    update_index();
+
+		//Check if all messages are 0
+		unsigned int i;
+		unsigned int flag = 1;
+		for(i = 0; i < 4; i++){
+			if(local_index.message[i] != 0){
+				flag = 0;
+				break;
+			}
+		}
+
+		//not a 0-0-0-0 message
+		if(flag == 0){update_index();}
+
+		//a 0-0-0-0 message -> That means
+		//that the previous vertex already has a complete index AND
+		//the vertex made sure that all its data entry indices
+		//are up to date across the network -> For this processing step,
+		//the current vertex now becomes the leader
+		if(flag == 1) {
+
+			//First thing is to make sure that the index becomes complete
+
+			//Then, take the received local_index.message_id and send the corresponding entry around the network
+
+		}
+
+
 	}
 	else {
 		local_index.message[(local_index.messages_received % 5) - 1] = payload;
@@ -421,12 +471,20 @@ void build_index_message_reached_sender() {
 	if(local_index.message_id < local_index.max_index) {
 
 		//take the entry with id local_index.message_id + 1 and repeat the process
+		unsigned int given_id = find_first_instance_of(local_index.message_id + 1);
+
+		//send the message with
+		build_index_start(given_id);
 
 
 	}
 
 	//2nd scenario: The message_id is exactly the same as the max_id
 	if(local_index.message_id == local_index.max_index){
+
+		//that means that this vertex already has a complete index -
+		//there are no more 0 ids associated with any data entry
+		local_index.index_complete == 1;
 
 	}
 
