@@ -15,7 +15,6 @@ make
 
 from edges.circle import make_circle
 from utilities.parser import parser
-from utilities.string_marshalling import anyBinaryToDecimal
 from vertex import Vertex 
 
 import spinnaker_graph_front_end as front_end

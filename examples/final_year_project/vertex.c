@@ -97,7 +97,48 @@ struct header_info {
 
 struct header_info header;
 
-unsigned int *id_index;
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// DATA ENTRY INDEX - assigns unqiue id's to every data entry within every column           //
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+struct index_info {
+
+	unsigned int *id_index;
+	/* Holds the unique identifier for each data entry
+	 * Example: id_index[1] contains the unique id for the
+	 * second data entry within SDRAM
+	 * Currently this works only for one column
+	 * Length: header.num_rows
+	 */
+	unsigned int *message;
+	/* Holds 4 integers that make up a string
+	 * Designed to take a string entry that has been forwarded
+	 * by 4 distinct MCPL packages
+	 */
+	unsigned int  message_id;
+	/* Holds the unique id of string above
+	 * Takes the id from an incoming MCPL package as well
+	 */
+	unsigned int  messages_received;
+	/* Keeps track of number of MCPL packages received
+	 * if messages_received mod 5 = 0, a string data entry and its
+	 * id have been received
+	 */
+    unsigned int  index_complete;
+	/* A flag that tells if the index on this vertex is complete
+	 * Complete = 1; Incomplete = 0;
+	 * Complete means that there are no indices left with value 0
+	 */
+	unsigned int  max_index;
+	/* A flag that tells if the index on this vertex is complete
+	 * Complete = 1; Incomplete = 0;
+	 * Complete means that there are no indices left with value 0
+	 */
+
+};
+
+struct index_info local_index;
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // FUNCTION REFERENCES                                                                           //                                                                  //
@@ -108,8 +149,12 @@ void iobuf_data();
 unsigned int compare_two_strings(unsigned int *string_1, unsigned int *string_2);
 
 void start_processing();
-void build_id_index();
-void unique_id_function_start();
+void initialise_index();
+void update_index();
+void build_index_start();
+void build_index_receive();
+void build_index_message_reached_sender();
+
 void count_function_start();
 void count_function_receive(uint payload);
 
@@ -170,11 +215,11 @@ void start_processing() {
 
 	switch(header.function_id) {
 		case 1 :
-			 build_id_index();
 	         count_function_start();
 	         break;
 		case 2 :
-			 unique_id_function_start();
+			 initialise_index();
+			 build_index_start();
 			 break;
 	    default :
 	    	log_info("No function selected");
@@ -182,108 +227,206 @@ void start_processing() {
 
 }
 
-void unique_id_function_start() {
+void build_index_start() {
 
-	//take every column of strings and assign an unique id to each string
-    address_t address = data_specification_get_data_address();
-    address_t data_address =
-        data_specification_get_region(INPUT_DATA, address);
+	//start if initiate is TRUE (or 1)
+	if(header.initiate_send == 1) {
 
-	//make sure any non-integer entries do exist
-	if(header.num_string_cols != 0 && header.num_rows != 0) {
+		//take every column of strings and assign an unique id to each string
+	    address_t address = data_specification_get_data_address();
+	    address_t data_address =
+	        data_specification_get_region(INPUT_DATA, address);
 
-		//read the first single entry
-	    unsigned int i = 0;
-	    unsigned int entry[4];
-	    for(i = 6; i < 10; i++){
-	    	entry[i-6] = *(&data_address[i]);
-	    }
+		//make sure any non-integer entries do exist
+		if(header.num_string_cols != 0 && header.num_rows != 0) {
 
-		//send the first data entry to the next core - 4 spikes
-		send_state(entry[0], 1);
-		send_state(entry[1], 1);
-		send_state(entry[2], 1);
-		send_state(entry[3], 1);
+			//read the first single entry
+		    unsigned int i = 0;
+		    unsigned int entry[4];
+		    for(i = 6; i < 10; i++){
+		    	entry[i-6] = *(&data_address[i]);
+		    }
+
+			//send the first data entry to the next core - 4 spikes
+			send_state(entry[0], 1);
+			send_state(entry[1], 1);
+			send_state(entry[2], 1);
+			send_state(entry[3], 1);
+
+			//send the id of that entry
+			send_state(local_index.id_index[0], 1);
+
+		}
 
 	}
 
 }
 
-void build_id_index() {
+void initialise_index() {
 
 	//take every column of strings and assign an unique id to each string
     address_t address = data_specification_get_data_address();
     address_t data_address =
         data_specification_get_region(INPUT_DATA, address);
 
-	id_index = malloc(sizeof(unsigned int) * header.num_rows);
-
-	unsigned int unique_id = 1;
+    local_index.id_index          = malloc(sizeof(unsigned int) * header.num_rows);
+    local_index.message           = malloc(sizeof(unsigned int) * 4);
+    local_index.message_id        = 0;
+    local_index.messages_received = 0;
+    local_index.index_complete    = 0;
+    local_index.max_index         = 0;
 
 	//make sure any non-integer entries do exist
 	if(header.num_string_cols != 0 && header.num_rows != 0) {
 
-		//read the first single entry
-		unsigned int i = 0;
-	    unsigned int j = 0;
+		//if you are the vertex that starts all of this:
+		if(header.initiate_send == 1) {
 
-	    unsigned int current_entry[4];
+			unsigned int unique_id = 1;
 
-	    for(i = 0; i < header.num_rows; i++) {
+			//read the first single entry
+			unsigned int i = 0;
+		    unsigned int j = 0;
 
-	    	unsigned int start = 6  + 4*i;
-	    	unsigned int end   = 10 + 4*i;
-	    	unsigned int count = 0;
+		    unsigned int current_entry[4];
 
-	    	//current entry
-		    for(j = start; j < end; j++) {
-		    	current_entry[count] = *(&data_address[j]);
-		    	count++;
+		    for(i = 0; i < header.num_rows; i++) {
+
+		    	unsigned int start = 6  + 4*i;
+		    	unsigned int end   = 10 + 4*i;
+		    	unsigned int count = 0;
+
+		    	//current entry
+			    for(j = start; j < end; j++) {
+			    	current_entry[count] = *(&data_address[j]);
+			    	count++;
+			    }
+
+			    //check if entry exists in the already assigned region
+			    //Since the number of entries on one core is always limited, this is fine
+
+	            unsigned int k = 0;
+	            unsigned int l = 0;
+
+	            unsigned int signed_flag = 0;
+
+	            unsigned int past_entry[4];
+
+	            for(k = 0; k < i; k++) {
+
+	    	    	unsigned int start2 = 6  + 4*k;
+	    	    	unsigned int end2   = 10 + 4*k;
+	    	    	unsigned int count2 = 0;
+
+	    	    	//past entry
+	    		    for(l = start2; l < end2; l++) {
+	    		    	past_entry[count2] = *(&data_address[l]);
+	    		    	count2++;
+	    		    }
+
+	    		    if(compare_two_strings(past_entry,current_entry) == 1) {
+	    		    	local_index.id_index[i] = local_index.id_index[k];
+	    		        signed_flag = 1;
+	                    break;
+	    		    }
+
+	            }
+
+	            //if no index assigned yet - that is the entry has not been spotted:
+	            if(signed_flag == 0){
+	            	local_index.id_index[i] = unique_id;
+	            	unique_id++;
+	            }
+
 		    }
 
-		    //check if entry exists in the already assigned region
-		    //Since the number of entries on one core is always limited, this is fine
+		    local_index.max_index = unique_id;
 
-            unsigned int k = 0;
-            unsigned int l = 0;
+		}
+		else {
 
-            unsigned int signed_flag = 0;
+			//if you are not the vertex who starts this, assign 0 to every index
+			unsigned int i = 0;
+		    for(i = 0; i < header.num_rows; i++) {
+		    	local_index.id_index[i] = 0;
+		    }
 
-            unsigned int past_entry[4];
+		}
 
-            for(k = 0; k < i; k++){
+	}
 
-    	    	unsigned int start2 = 6  + 4*k;
-    	    	unsigned int end2   = 10 + 4*k;
-    	    	unsigned int count2 = 0;
+}
 
-    	    	//past entry
-    		    for(l = start2; l < end2; l++) {
-    		    	past_entry[count2] = *(&data_address[l]);
-    		    	count2++;
-    		    }
+void build_index_receive(uint payload) {
 
-    		    if(compare_two_strings(past_entry,current_entry) == 1) {
-    		        id_index[i] = id_index[k];
-                    log_info("Unique id assigned: %d", unique_id);
-                    log_info("Entry: %d", past_entry[0]);
-                    log_info("Entry: %d", current_entry[0]);
-    		        signed_flag = 1;
-                    break;
-    		    }
+	//wait until all 5 spikes received
+	//4 Spikes for the string info - 1 for the id
 
-            }
+	local_index.messages_received++;
 
-            //if no index assigned yet - that is the entry has not been spotted:
-            if(signed_flag == 0){
-            	id_index[i] = unique_id;
-                log_info("Unique id assigned: %d", unique_id);
-                log_info("Entry: %d", past_entry[0]);
-                log_info("Entry: %d", current_entry[0]);
-            	unique_id++;
-            }
+	if(local_index.messages_received % 5 == 0) {
+		local_index.message_id = payload;
+	    update_index();
+	}
+	else {
+		local_index.message[(local_index.messages_received % 5) - 1] = payload;
+	}
 
+}
+
+void update_index() {
+
+	//goes through the index and replaces all elements that match with the
+	//spike message with the id contained within the message
+    address_t address = data_specification_get_data_address();
+    address_t data_address =
+        data_specification_get_region(INPUT_DATA, address);
+
+	unsigned int i,j;
+    for(i = 0; i < header.num_rows; i++) {
+
+    	unsigned int start = 6  + 4 * i;
+    	unsigned int end   = 10 + 4 * i;
+    	unsigned int count = 0;
+
+    	unsigned int current_entry[4];
+
+    	//current entry
+	    for(j = start; j < end; j++) {
+	    	current_entry[count] = *(&data_address[j]);
+	    	count++;
 	    }
+
+    	if(compare_two_strings(current_entry,local_index.message) == 1) {
+
+    		//check if the id has already been assigned;
+    		//if that is the case you completed the ring (as in the message went through all cores already)
+    		if(local_index.id_index[i] != 0) {
+    			build_index_message_reached_sender();
+    		}
+    		else {
+    			//update the index if it is still 0
+        	    local_index.id_index[i] = local_index.message_id;
+    		}
+
+    	}
+
+    }
+
+}
+
+void build_index_message_reached_sender() {
+
+	//1st scenario: The message_id is smaller than the max_id
+	if(local_index.message_id < local_index.max_index) {
+
+		//take the entry with id local_index.message_id + 1 and repeat the process
+
+
+	}
+
+	//2nd scenario: The message_id is exactly the same as the max_id
+	if(local_index.message_id == local_index.max_index){
 
 	}
 
@@ -295,7 +438,7 @@ void count_function_start() {
 	//the current implementation relies upon a ring structure
 
 	//send the first MCPL package if initiate is TRUE
-	if(header.initiate_send == 1){
+	if(header.initiate_send == 1) {
 		log_info("solution: %d", header.num_rows);
 		record_int_entry(header.num_rows);
 		send_state(header.num_rows, 1);
@@ -354,6 +497,9 @@ void receive_data(uint key, uint payload) {
 		case 1 :
 			 count_function_receive(payload);
 	         break;
+		case 2 :
+			 build_index_receive(payload);
+	         break;
 	    default :
 	    	log_info("No function selected");
 	}
@@ -365,7 +511,7 @@ void receive_data(uint key, uint payload) {
 // RETRIEVE_DATA, RECORD_DATA, RECORD_STRING_ENTRY, RECORD_INT_ENTRY                             //
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void retrieve_header_data(){
+void retrieve_header_data() {
 
     uint chip = spin1_get_chip_id();
     uint core = spin1_get_core_id();
@@ -434,10 +580,8 @@ void record_string_entry(unsigned int *int_arr) {
     //record the data entry in the first recording region (which is OUTPUT)
     bool recorded = recording_record(0, buffer, header.string_size * sizeof(unsigned char));
 
-    if (recorded) {
-        log_info("Vertex data recorded successfully!");
-    } else {
-        log_info("Vertex was not recorded...");
+    if (!recorded) {
+        log_info("Information was not recorded...");
     }
 
 }
@@ -449,10 +593,8 @@ void record_int_entry(unsigned int solution) {
 
     bool recorded = recording_record(0, result, header.string_size * sizeof(unsigned char));
 
-    if (recorded) {
-        log_info("Integer solution recorded successfully");
-    } else {
-        log_info("Integer solution was not recorded...");
+    if (!recorded) {
+        log_info("Information was not recorded...");
     }
 
 }
