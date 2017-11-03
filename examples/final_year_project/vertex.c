@@ -135,7 +135,8 @@ struct index_info {
 	 */
 
 	unsigned int message_0000_sent;
-	/* A flag that tells you if this vertex already sent 0-0-0-0 to its neighbour
+	/* A flag that tells you if this vertex already
+	 * sent 0-0-0-0 to its neighbour
 	 * If that is the case, all the vertex has to do upon receiving
 	 * messages is to forward without invoking update_index()
 	 */
@@ -390,7 +391,7 @@ void complete_index(unsigned int unique_id, unsigned int start_index) {
         unsigned int k = 0;
         unsigned int l = 0;
 
-        unsigned int signed_flag = 0;
+        unsigned int assigned = 0;
 
         unsigned int past_entry[4];
 
@@ -412,7 +413,7 @@ void complete_index(unsigned int unique_id, unsigned int start_index) {
 
     		    if(compare_two_strings(past_entry,current_entry) == 1) {
     		    	local_index.id_index[i] = local_index.id_index[k];
-    		        signed_flag = 1;
+    		    	assigned = 1;
                     break;
     		    }
 
@@ -421,11 +422,11 @@ void complete_index(unsigned int unique_id, unsigned int start_index) {
         }
         else {
         	//else make sure you do not assign unqiue_id if the id_index is not 0
-        	signed_flag = 1;
+        	assigned = 1;
         }
 
         //if no index assigned yet - that is the entry has not been spotted:
-        if(signed_flag == 0){
+        if(assigned == 0){
         	local_index.id_index[i] = unique_id;
         	unique_id++;
         }
@@ -521,21 +522,34 @@ void index_receive(uint payload) {
 		//the current vertex now becomes the leader
 		if(flag == 1) {
 
-			//First thing is to make sure that the index becomes complete
-			int zeros_exist = find_instance_of(0,0); //find first occurence of 0 index
-
-			if(zeros_exist != -1) {
-				//id = received message id, zeros_exist points to first item with id 0
-				complete_index(local_index.message_id, zeros_exist);
-
-				unsigned int data_entry_position = find_instance_of(local_index.message_id, 0);
-				send_string_to_next_vertex_with_id(data_entry_position);
-
+			//terminate the proces if message_0000_sent == 1 -
+			//that means that all id_indexes in all vertices had been synchronised
+			if(local_index.message_0000_sent == 1){
+              //finish
 			}
 			else {
 
-               //all data entries in all vertices within the network
-			   //have valid ids assigned to them
+				//Make sure that the index is complete - if not, take necessary steps
+				int zeros_exist = find_instance_of(0,0); //find first occurence of 0 index
+
+				//zeros exist
+				if(zeros_exist != -1) {
+					//id = received message id, zeros_exist points to first item with id 0
+					complete_index(local_index.message_id, zeros_exist);
+
+					unsigned int data_entry_position = find_instance_of(local_index.message_id, 0);
+					send_string_to_next_vertex_with_id(data_entry_position);
+
+				}
+
+				//zeros don't exist -the index is complete:
+				//Here the index was completed through update_index() alone - that means that
+				//there are no new items which can take an id that does not occurr in the previous vertex
+				if(zeros_exist == -1) {
+					local_index.index_complete = 1;
+					forward_string_message_to_next_vertex_with_id();
+					local_index.message_0000_sent = 1;
+				}
 
 			}
 
@@ -559,13 +573,7 @@ void index_message_reached_sender() {
 		int index = find_instance_of(local_index.message_id + 1, 0);
 
 		//send a new entry around with its id
-		if(index != -1){
-
-			if(local_index.index_complete == 1) {
-				send_string_to_next_vertex_with_id(index);
-			}
-
-		}
+		send_string_to_next_vertex_with_id(index);
 
 	}
 
