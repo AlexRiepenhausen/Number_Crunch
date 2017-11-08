@@ -35,17 +35,22 @@ def load_data_onto_vertices(total_number_of_cores, data):
         initiate = 0
         if x%16 == 0:
             initiate = 1
+            
+        data_parcel = [data[x+ 0][0],data[x+ 0][1]], \
+                      [data[x+16][0],data[x+16][1]], \
+                      [data[x+32][0],data[x+32][1]], \
+                      [data[x+48][0],data[x+48][1]]
                                  
         current_vertex = front_end.add_machine_vertex(
             Vertex,
             {
             "columns":         2,
-            "rows":            2,
+            "rows":            4,
             "string_size":     16,
             "num_string_cols": 1,
-            "entries":         [[data[x][0],data[x][1]],[data[x+16][0],data[x+16][1]]],
+            "entries":         data_parcel,
             "initiate":        initiate,
-            "function_id":     1,
+            "function_id":     2,
             "state":           x
             },
             label="Data packet at x {}".format(x))   
@@ -78,19 +83,26 @@ volume_per_core = total_number_of_items/total_number_of_cores
 
 load_data_onto_vertices(total_number_of_cores, raw_data)
 
-front_end.run(20)
+front_end.run(400)
 
 placements = front_end.placements()
 buffer_manager = front_end.buffer_manager()
-
 
 for placement in sorted(placements.placements,
                         key=lambda p: (p.x, p.y, p.p)):
 
     if isinstance(placement.vertex, Vertex):
+        
         result = placement.vertex.read(placement, buffer_manager)
-        logger.info("{}, {}, {} > {}".format(
-            placement.x, placement.y, placement.p, result))
+         
+        logger.info("|----------------|----|") 
+        logger.info("| Core {}, {}, {}".format(placement.x, placement.y, placement.p))   
+        logger.info("|----------------|----|") 
+        
+        for x in range(0, 4):
+            start = 0  + 16*x;
+            end   = 15 + 16*x;
+            logger.info("| {}| {}".format(result[start:end],result[start+64:end+64]))
 
 
 front_end.stop()

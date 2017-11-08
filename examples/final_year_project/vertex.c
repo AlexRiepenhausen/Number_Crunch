@@ -138,7 +138,7 @@ struct index_info {
 	/* A flag that tells you if this vertex already
 	 * sent 0-0-0-0 to its neighbour
 	 * If that is the case, all the vertex has to do upon receiving
-	 * messages is to forward without invoking update_index()
+	 * messages is to forward without invoking update_index_upon_message_received()
 	 */
 
 
@@ -161,7 +161,7 @@ void forward_string_message_to_next_vertex_with_id();
 void start_processing();
 void initialise_index();
 void complete_index(unsigned int unique_id, unsigned int start_index);
-void update_index();
+unsigned int update_index_upon_message_received();
 void index_receive(uint payload);
 void index_message_reached_sender();
 void count_function_start();
@@ -261,13 +261,20 @@ void send_string_to_next_vertex_with_id(unsigned int data_entry_position) {
 	    }
 
 		//send the first data entry to the next core - 4 spikes
-		send_state(entry[0], 1);
-		send_state(entry[1], 1);
-		send_state(entry[2], 1);
-		send_state(entry[3], 1);
+		send_state(entry[0], 3);
+		send_state(entry[1], 3);
+		send_state(entry[2], 3);
+		send_state(entry[3], 3);
 
 		//send the id of that entry
-		send_state(local_index.id_index[data_entry_position], 1);
+		send_state(local_index.id_index[data_entry_position], 3);
+
+		log_info("SEND OWN DATA MESSAGE");
+		log_info("%d",entry[0]);
+		log_info("%d",entry[1]);
+		log_info("%d",entry[2]);
+		log_info("%d",entry[3]);
+		log_info("%d",local_index.id_index[data_entry_position]);
 
 	}
 
@@ -276,21 +283,30 @@ void send_string_to_next_vertex_with_id(unsigned int data_entry_position) {
 void send_empty_string_to_next_vertex_with_id(unsigned int id) {
 
 	//take every column of strings and assign an unique id to each string
-	send_state( 0, 1);
-	send_state( 0, 1);
-	send_state( 0, 1);
-	send_state( 0, 1);
-	send_state(id, 1);
+	send_state( 0, 3);
+	send_state( 0, 3);
+	send_state( 0, 3);
+	send_state( 0, 3);
+	send_state(id, 3);
+
+	log_info("SEND 0-0-0-0");
 
 }
 
 void forward_string_message_to_next_vertex_with_id() {
 
-	send_state(local_index.message[0], 1);
-	send_state(local_index.message[1], 1);
-	send_state(local_index.message[2], 1);
-	send_state(local_index.message[3], 1);
-	send_state(local_index.message_id, 1);
+	send_state(local_index.message[0], 3);
+	send_state(local_index.message[1], 3);
+	send_state(local_index.message[2], 3);
+	send_state(local_index.message[3], 3);
+	send_state(local_index.message_id, 3);
+
+	log_info("FORWARD MESSAGE");
+	log_info("%d",local_index.message[0]);
+	log_info("%d",local_index.message[1]);
+	log_info("%d",local_index.message[2]);
+	log_info("%d",local_index.message[3]);
+	log_info("%d",local_index.message_id);
 
 }
 
@@ -315,6 +331,8 @@ void start_processing() {
 
 			 //start if index is complete - this only happens with the leader vertex in the beginning
 			 if(local_index.index_complete == 1) {
+				 //record the index information
+				 record_solution();
 				 send_string_to_next_vertex_with_id(0); //-> first entry
 			 }
 
@@ -341,19 +359,16 @@ void initialise_index() {
 	//make sure any non-integer entries do exist
 	if(header.num_string_cols != 0 && header.num_rows != 0) {
 
+		//assign 0 to every index
+		unsigned int i = 0;
+	    for(i = 0; i < header.num_rows; i++) {
+	    	local_index.id_index[i] = 0;
+	    }
+
 		//if you are the vertex that starts all of this:
 		if(header.initiate_send == 1) {
 			//id = 1, start position = 0
 			complete_index(1,0);
-		}
-		else {
-
-			//if you are not the vertex who starts this, assign 0 to every index
-			unsigned int i = 0;
-		    for(i = 0; i < header.num_rows; i++) {
-		    	local_index.id_index[i] = 0;
-		    }
-
 		}
 
 	}
@@ -425,24 +440,36 @@ void complete_index(unsigned int unique_id, unsigned int start_index) {
         	assigned = 1;
         }
 
+
         //if no index assigned yet - that is the entry has not been spotted:
         if(assigned == 0){
         	local_index.id_index[i] = unique_id;
+        	local_index.max_id = unique_id;
+
+    	    //make sure that local_index.max_id is updated as well
+			if(local_index.max_id < unique_id){
+    			local_index.max_id = unique_id;
+			}
+
         	unique_id++;
         }
 
     }
 
+    log_info("Finished, Unique id %d", unique_id);
+
+
     //all data entries have a non zero index assigned to them
-    local_index.max_id = unique_id - 1;
     local_index.index_complete = 1;
 
 }
 
-void update_index() {
+unsigned int update_index_upon_message_received() {
 
-	//check if a 0-0-0-0 message has been sent by this vertex in the past -
-	//if that is the case, no updating is needed
+	//return 1 if the received message was sent by this vertex
+	//else return 0
+
+    //skip this function if message_0000 already sent
     if(local_index.message_0000_sent != 1) {
 
     	//goes through the index and replaces all elements that match with the
@@ -472,10 +499,18 @@ void update_index() {
         		//if that is the case you completed the ring (as in the message went through all cores already)
         		if(local_index.id_index[i] != 0) {
         			index_message_reached_sender();
+        			return 1;
         		}
         		else {
+
         			//update the index if it is still 0
             	    local_index.id_index[i] = local_index.message_id;
+
+            	    //make sure that local_index.max_id is updated as well
+        			if(local_index.max_id < local_index.message_id){
+            			local_index.max_id = local_index.message_id;
+        			}
+
         		}
 
         	}
@@ -483,6 +518,8 @@ void update_index() {
         }//for
 
     }//if message_0000_sent != 1
+
+    return 0;
 
 
 }
@@ -501,18 +538,25 @@ void index_receive(uint payload) {
 		//Check if all messages are 0
 		unsigned int i;
 		unsigned int flag = 1;
-		for(i = 0; i < 4; i++){
+		for(i = 0; i < 4; i++) {
 			if(local_index.message[i] != 0){
 				flag = 0;
 				break;
 			}
 		}
 
+		log_info("Number of messages received: %d", local_index.messages_received);
+
 		//not a 0-0-0-0 message
 		if(flag == 0){
-			update_index();
-		    //forward string to next vertex
-			forward_string_message_to_next_vertex_with_id();
+			log_info("A normal message");
+			unsigned int message_received_sender = update_index_upon_message_received();
+
+		    //forward string to next vertex if this message did not originate from this vertex
+            if(message_received_sender == 0){
+    			forward_string_message_to_next_vertex_with_id();
+            }
+
 		}
 
 		//a 0-0-0-0 message -> That means
@@ -520,38 +564,46 @@ void index_receive(uint payload) {
 		//the vertex made sure that all its data entry indices
 		//are up to date across the network -> For this processing step,
 		//the current vertex now becomes the leader
+
+		//ignore messages if message_0000_has been sent already
 		if(flag == 1) {
 
-			//terminate the proces if message_0000_sent == 1 -
+			log_info("A zero message");
+
+			//terminate the proces if message_0000_sent == 1
 			//that means that all id_indexes in all vertices had been synchronised
-			if(local_index.message_0000_sent == 1){
-              //finish
+			if(local_index.message_0000_sent == 1) {
+				log_info("TERMINATED");
+				return;
 			}
-			else {
 
-				//Make sure that the index is complete - if not, take necessary steps
-				int zeros_exist = find_instance_of(0,0); //find first occurence of 0 index
+			//Make sure that the index is complete - if not, take necessary steps
+			int zeros_exist = find_instance_of(0,0); //find first occurence of 0 index
 
-				//zeros exist
-				if(zeros_exist != -1) {
-					//id = received message id, zeros_exist points to first item with id 0
-					complete_index(local_index.message_id, zeros_exist);
+			//zeros exist
+			if(zeros_exist != -1) {
+				//id = received message id, zeros_exist points to first item with id 0
+				complete_index(local_index.message_id, zeros_exist);
 
-					unsigned int data_entry_position = find_instance_of(local_index.message_id, 0);
-					send_string_to_next_vertex_with_id(data_entry_position);
-
-				}
-
-				//zeros don't exist -the index is complete:
-				//Here the index was completed through update_index() alone - that means that
-				//there are no new items which can take an id that does not occurr in the previous vertex
-				if(zeros_exist == -1) {
-					local_index.index_complete = 1;
-					forward_string_message_to_next_vertex_with_id();
-					local_index.message_0000_sent = 1;
-				}
+				unsigned int data_entry_position = find_instance_of(local_index.message_id, 0);
+				send_string_to_next_vertex_with_id(data_entry_position);
 
 			}
+
+			//zeros don't exist -the index is complete:
+			//Here the index was completed through update_index_upon_message_received() alone - that means that
+			//there are no new items which can take an id that does not occurr in the previous vertex
+			if(zeros_exist == -1) {
+				local_index.index_complete = 1;
+
+				//send the zero message yourself
+				forward_string_message_to_next_vertex_with_id();
+				local_index.message_0000_sent = 1;
+
+			}
+
+			//record the information - every vertex will reach this piece of code only once
+			record_solution();
 
 		}
 
@@ -562,18 +614,38 @@ void index_receive(uint payload) {
 		local_index.message[(local_index.messages_received % 5) - 1] = payload;
 	}
 
+	log_info("upon receive:");
+	log_info("id_1: %d",local_index.id_index[0]);
+	log_info("id_2: %d",local_index.id_index[1]);
+	log_info("idmax %d",local_index.max_id);
+
 }
 
 void index_message_reached_sender() {
+
+	log_info("Message id: %d, Max id: %d",local_index.message_id,local_index.max_id);
 
 	//1st scenario: The message_id is smaller than the max_id
 	if(local_index.message_id < local_index.max_id) {
 
 		//take the entry with id local_index.message_id + 1 and repeat the process
-		int index = find_instance_of(local_index.message_id + 1, 0);
+		unsigned int new_id = local_index.message_id + 1;
+		int index = find_instance_of(new_id, 0);
+
+		//go to the next existing id
+		while(index == -1) {
+			new_id = new_id + 1;
+			if(new_id > local_index.max_id) {break;}
+			index  = find_instance_of(new_id, 0);
+		}
 
 		//send a new entry around with its id
-		send_string_to_next_vertex_with_id(index);
+		if(index != -1) {
+			send_string_to_next_vertex_with_id(index);
+		}
+		else {
+			log_info("This should not happen - error");
+		}
 
 	}
 
@@ -584,7 +656,9 @@ void index_message_reached_sender() {
 		send_empty_string_to_next_vertex_with_id(local_index.max_id + 1);
 
 		//set local_index.message_0000_sent to 1,
-		//so that update_index doesn't need to be invoked again
+		//so that update_index_upon_message_received doesn't need to be invoked again
+		log_info("FINISH");
+
 		local_index.message_0000_sent = 1;
 
 	}
@@ -600,7 +674,7 @@ void count_function_start() {
 	if(header.initiate_send == 1) {
 		log_info("solution: %d", header.num_rows);
 		record_int_entry(header.num_rows);
-		send_state(header.num_rows, 1);
+		send_state(header.num_rows, 3);
 	}
 
 }
@@ -611,7 +685,7 @@ void count_function_receive(uint payload) {
 	//if we have reached the original vertex, stop the entire mechanism
 	if(header.initiate_send == 0){
 		payload = payload + header.num_rows;
-		send_state(payload, 1);
+		send_state(payload, 3);
 		log_info("solution: %d", payload);
 		record_int_entry(payload);
 	}
@@ -697,7 +771,7 @@ void retrieve_header_data() {
 	log_info("string_size: %d", header.string_size);
 	log_info("flag : %d", header.num_string_cols);
 	log_info("initate_send : %d", header.initiate_send);
-	log_info("function_id: %d", header.initiate_send);
+	log_info("function_id: %d", header.function_id);
 
 }
 
@@ -708,14 +782,30 @@ void record_solution() {
     address_t data_address =
         data_specification_get_region(INPUT_DATA, address);
 
-    unsigned int i = 0;
-    unsigned int entry1[4];
-    for(i = 6; i < 10; i++){
-    	entry1[i-6] = *(&data_address[i]);
+    unsigned int i,j = 0;
+
+    for(i = 0; i < header.num_rows; i++){
+
+    	unsigned int entry[4];
+
+    	unsigned int start = 6  + 4 * i;
+    	unsigned int end   = 10 + 4 * i;
+    	unsigned int count = 0;
+
+        for(j = start; j < end; j++){
+        	entry[count] = *(&data_address[j]);
+        	count++;
+        }
+
+        //record the data entry in the first recording region (which is OUTPUT)
+        record_string_entry(entry);
+
     }
 
-    //record the data entry in the first recording region (which is OUTPUT)
-    record_string_entry(entry1);
+    for(i = 0; i < header.num_rows; i++) {
+        record_int_entry(local_index.id_index[i]);
+    }
+
 
 }
 
@@ -734,7 +824,7 @@ void record_string_entry(unsigned int *int_arr) {
 	  buffer[size*i + 3] =  int_arr[i] & 0xFF;
 	}
 
-    log_info("Entry : %d", buffer);
+    log_info("String Entry : %s", buffer);
 
     //record the data entry in the first recording region (which is OUTPUT)
     bool recorded = recording_record(0, buffer, header.string_size * sizeof(unsigned char));
@@ -754,6 +844,9 @@ void record_int_entry(unsigned int solution) {
 
     if (!recorded) {
         log_info("Information was not recorded...");
+    }
+    else {
+    	log_info("Integer Entry: %d", solution);
     }
 
 }
@@ -790,7 +883,7 @@ void update(uint ticks, uint b) {
     if (time == 1) {
     	retrieve_header_data();
     	start_processing();
-    } else if (time == 100) {
+    } else if (time == 400) {
         iobuf_data();
     }
 

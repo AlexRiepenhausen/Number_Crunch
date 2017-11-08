@@ -23,8 +23,8 @@ from pacman.model.graphs.machine import MachineEdge
 
 def make_circle(vertices, list_size, front_end):
     
-    first_vertex_index   =  0   #first index in cluster    
-    central_vertex_index = 15   #final and central index in cluster   
+    first_vertex_index = 0   #first index in cluster    
+    final_vertex_index = 15   #final and central index in cluster   
     
     for x in range(0, list_size):
         
@@ -47,7 +47,7 @@ def make_circle(vertices, list_size, front_end):
                 front_end.add_machine_edge_instance(
                 MachineEdge(
                     vertices[x], vertices[x+1],
-                    label=(x%16)), vertices[x].PARTITION_ID)
+                    label=(x)), vertices[x].PARTITION_ID)
 
             #close the circle
             if x%16 == 15: 
@@ -65,9 +65,9 @@ def make_circle(vertices, list_size, front_end):
                 front_end.add_machine_edge_instance(
                 MachineEdge(
                     vertices[x], vertices[first_vertex_index],
-                    label=(x%16)), vertices[x].PARTITION_ID)
+                    label=(x)), vertices[x].PARTITION_ID)
 
-                first_vertex_index  =  central_vertex_index +  1
-                central_vertex_index = first_vertex_index   + 15              
+                first_vertex_index  = final_vertex_index + 1
+                final_vertex_index  = first_vertex_index + 15              
            
            
