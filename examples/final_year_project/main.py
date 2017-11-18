@@ -23,6 +23,37 @@ import os
 
 '''-----------------------------------------------------------------------------------------------------'''
 
+def display_results_function_one():
+    
+        for placement in sorted(placements.placements,
+            key=lambda p: (p.x, p.y, p.p)):
+
+            if isinstance(placement.vertex, Vertex):
+                result = placement.vertex.read(placement, buffer_manager)
+                logger.info("{}, {}, {} > {}".format(
+                placement.x, placement.y, placement.p, result))
+    
+
+def display_results_function_two():
+
+        for placement in sorted(placements.placements,
+            key=lambda p: (p.x, p.y, p.p)):
+
+            if isinstance(placement.vertex, Vertex):
+        
+                result = placement.vertex.read(placement, buffer_manager)
+         
+                logger.info("|----------------|----|") 
+                logger.info("| Core {}, {}, {}".format(placement.x, placement.y, placement.p))   
+                logger.info("|----------------|----|") 
+        
+            for x in range(0, 4):
+                start = 0  + 16*x;
+                end   = 15 + 16*x;
+                logger.info("| {}| {}".format(result[start:end],result[start+64:end+64]))
+
+'''-----------------------------------------------------------------------------------------------------'''
+
 def load_data_onto_vertices(total_number_of_cores, data):
     
     #get rid of the headers
@@ -50,7 +81,7 @@ def load_data_onto_vertices(total_number_of_cores, data):
             "num_string_cols": 1,
             "entries":         data_parcel,
             "initiate":        initiate,
-            "function_id":     2,
+            "function_id":     3,
             "state":           x
             },
             label="Data packet at x {}".format(x))   
@@ -88,21 +119,6 @@ front_end.run(400)
 placements = front_end.placements()
 buffer_manager = front_end.buffer_manager()
 
-for placement in sorted(placements.placements,
-                        key=lambda p: (p.x, p.y, p.p)):
-
-    if isinstance(placement.vertex, Vertex):
-        
-        result = placement.vertex.read(placement, buffer_manager)
-         
-        logger.info("|----------------|----|") 
-        logger.info("| Core {}, {}, {}".format(placement.x, placement.y, placement.p))   
-        logger.info("|----------------|----|") 
-        
-        for x in range(0, 4):
-            start = 0  + 16*x;
-            end   = 15 + 16*x;
-            logger.info("| {}| {}".format(result[start:end],result[start+64:end+64]))
-
+display_results_function_one()
 
 front_end.stop()

@@ -17,57 +17,58 @@ def make_circle: Builds this cluster within a chip
 
 '''
 
-from circle_edge import CircleEdge
-from enum import Enum
 from pacman.model.graphs.machine import MachineEdge
 
 def make_circle(vertices, list_size, front_end):
-    
-    first_vertex_index = 0   #first index in cluster    
-    final_vertex_index = 15   #final and central index in cluster   
+     
+    leader = 0
     
     for x in range(0, list_size):
         
-        if vertices[x] is not None:
+        if vertices[x] is not None:           
             
-            #before you reach the final core
             if x%16 < 15:
-                #connect to other cluster vertex
-                '''
-                front_end.add_machine_edge(
-                    CircleEdge,
-                    {
-                        'pre_vertex':  vertices[x],
-                        'post_vertex': vertices[x+1],
-                        'direction':   CircleEdge.DIRECTIONS.NEXT
-                    },
-                    label="ClusterToCluster",
-                    semantic_label="TRANSMISSION")'''
                 
+                #make ring
                 front_end.add_machine_edge_instance(
                 MachineEdge(
                     vertices[x], vertices[x+1],
-                    label=(x)), vertices[x].PARTITION_ID)
+                    label=(x)), vertices[x].RING)
+                
+                
+                #direct response channel from vertex to leader
+                if x != leader:
+                    front_end.add_machine_edge_instance(
+                        MachineEdge(
+                        vertices[x], vertices[leader],
+                        label=(x)), vertices[x].REPORT)
+                
+            #if this is the leader vertex         
+            if x%16 == 0:     
 
-            #close the circle
-            if x%16 == 15: 
-                '''
-                front_end.add_machine_edge(
-                    CircleEdge,
-                    {
-                        'pre_vertex':  vertices[x],
-                        'post_vertex': vertices[first_vertex_index],
-                        'direction':   CircleEdge.DIRECTIONS.NEXT
-                    },
-                    label="ClusterToCluster",
-                    semantic_label="TRANSMISSION")'''
+                for y in range(1, 16):       
+                    front_end.add_machine_edge_instance(
+                        MachineEdge(
+                        vertices[leader], vertices[leader + y],
+                        label=(y-1)), vertices[x].COMMAND)
+                
+            if x%16 == 15:
+                
+                #finish ring
+                front_end.add_machine_edge_instance(
+                MachineEdge(
+                    vertices[x], vertices[leader],
+                    label=(x)), vertices[x].RING) 
+                
                 
                 front_end.add_machine_edge_instance(
                 MachineEdge(
-                    vertices[x], vertices[first_vertex_index],
-                    label=(x)), vertices[x].PARTITION_ID)
-
-                first_vertex_index  = final_vertex_index + 1
-                final_vertex_index  = first_vertex_index + 15              
+                    vertices[x], vertices[leader],
+                    label=(x)), vertices[x].REPORT)         
+                
+                leader = leader + 16
+                           
+                                              
+                             
            
            

@@ -19,6 +19,7 @@ from spinn_front_end_common.utilities.utility_objs import ExecutableStartType
 
 from enum import Enum
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -29,11 +30,14 @@ class Vertex(
         MachineVertex, MachineDataSpecableVertex, AbstractHasAssociatedBinary,
         AbstractReceiveBuffersToHost):
     
-    PARTITION_ID = "STATE"
+    #different edge partitions
+    RING    = "RING"
+    REPORT  = "REPORT"
+    COMMAND = "COMMAND"
 
-    TRANSMISSION_DATA_SIZE = 2 * 4  # has key and key
-    STATE_DATA_SIZE = 1 * 4  # 1 or 2 based off dead or alive
-    NEIGHBOUR_INITIAL_STATES_SIZE = 2 * 4  # alive states, dead states
+    TRANSMISSION_DATA_SIZE = 4 * 4  # has key and key
+    STATE_DATA_SIZE = 2 * 4  # 1 or 2 based off dead or alive
+    NEIGHBOUR_INITIAL_STATES_SIZE = 4 * 4 # alive states, dead states
 
     # Regions for populations
     DATA_REGIONS = Enum(
@@ -134,79 +138,75 @@ class Vertex(
             for k in range (0, self.rows):
                 spec.write_value(int(self.entries[k][i])) #-> those are 32-bit integers by default
                     
-    def configure_edges(self,spec,routing_info,machine_graph):
+    def configure_ring_edges(self,spec,routing_info,machine_graph):
         
         #edge related information
         # check got right number of keys and edges going into me
         partitions = machine_graph.get_outgoing_edge_partitions_starting_at_vertex(self)
-        
-        if not utility_calls.is_single(partitions):
-            raise exceptions.ConfigurationException(
-                "Can only handle one type of partition. ") 
             
         # check for duplicates - there is only one edge at the moment for each vertex
         edges = list(machine_graph.get_edges_ending_at_vertex(self))
-        if len(set(edges)) != 1:
+        
+        ''' 
+        if len(set(edges)) != 2:
             output = ""
             for edge in edges:
                 output += edge.pre_subvertex.label + " : "
-            raise exceptions.ConfigurationException(
-                "I've got duplicate edges. This is a error. The edges are "
-                "connected to these vertices \n {}".format(output))
+                raise exceptions.ConfigurationException(
+                    "I've got duplicate edges. This is a error. The edges are "
+                    "connected to these vertices \n {}".format(output))
 
-        if len(edges) != 1:
+        if len(edges) != 2:
             raise exceptions.ConfigurationException(
-                "I've not got the right number of connections. I have {} "
-                "instead of 1".format(
-                    len(machine_graph.incoming_subedges_from_subvertex(self))))
-
+                 "I've not got the right number of connections. I have {} "
+                 "instead of 1".format(
+                 len(machine_graph.incoming_subedges_from_subvertex(self))))
+        '''
+        
         for edge in edges:
             if edge.pre_vertex == self:
                 raise exceptions.ConfigurationException(
                     "I'm connected to myself, this is deemed an error"
-                    " please fix.")            
-            
-        # get the key from this instance of the vertex
-        key = routing_info.get_first_key_from_pre_vertex(
-            self, self.PARTITION_ID)
-
-        spec.switch_write_focus(
-            region=self.DATA_REGIONS.TRANSMISSIONS.value)
+                    " please fix.")   
         
-        #write the key to the designated region
-        #0 -> key does not exist, 1 -> key exists
-        if key is None:
-            spec.write_value(0)  #for some reason key is None
-            spec.write_value(0)
-        else:
-            spec.write_value(1) 
-            spec.write_value(key)
-
-        # write state value
-        #0 -> vertex dead, 1 -> vertex alive
-        spec.switch_write_focus(
-            region=self.DATA_REGIONS.STATE.value)
-
-        if self.state: 
-            spec.write_value(1)
-        else:
-            spec.write_value(0)
-
-        # write neighbours data state
-        spec.switch_write_focus(
-            region=self.DATA_REGIONS.NEIGHBOUR_INITIAL_STATES.value)
-        alive = 0
-        dead = 0
+        for partition in partitions:      
+               
+            spec.switch_write_focus(region=self.DATA_REGIONS.TRANSMISSIONS.value)
+            key = routing_info.get_first_key_from_partition(partition)      
         
-        for edge in edges:
-            state = edge.pre_vertex.state
-            if state:
-                alive += 1
+            #write the key to the designated region
+            #0 -> key does not exist, 1 -> key exists
+            if key is None:
+                spec.write_value(0)
+                spec.write_value(0)
             else:
-                dead += 1
+                spec.write_value(len(partitions)) 
+                spec.write_value(key)
 
-        spec.write_value(alive)
-        spec.write_value(dead)                                  
+            # write state value
+            #0 -> vertex dead, 1 -> vertex alive
+            spec.switch_write_focus(region=self.DATA_REGIONS.STATE.value)
+
+            if self.state: 
+                spec.write_value(1)
+            else:
+                spec.write_value(0)
+
+            # write neighbours data state
+            spec.switch_write_focus(region=self.DATA_REGIONS.NEIGHBOUR_INITIAL_STATES.value)
+            
+            alive = 0
+            dead = 0     
+            for edge in edges:
+                
+                state = edge.pre_vertex.state
+                if state:
+                    alive += 1
+                else:
+                    dead += 1
+
+            spec.write_value(alive)
+            spec.write_value(dead)            
 
     @overrides(MachineDataSpecableVertex.generate_machine_data_specification)
     def generate_machine_data_specification(
@@ -231,7 +231,7 @@ class Vertex(
         Vertex.load_data_on_vertices(self,spec,iptags)
         
         #build all required edges between the vertices
-        Vertex.configure_edges(self,spec,routing_info,machine_graph)
+        Vertex.configure_ring_edges(self,spec,routing_info,machine_graph)
         
         # End-of-Spec:
         spec.end_specification()
@@ -265,7 +265,7 @@ class Vertex(
         
         spec.reserve_memory_region(
             region=self.DATA_REGIONS.NEIGHBOUR_INITIAL_STATES.value,
-            size=8, label="neighour_states")    
+            size=self.NEIGHBOUR_INITIAL_STATES_SIZE, label="neighour_states")    
 
     def read(self, placement, buffer_manager):
         """ Get the data written into sdram

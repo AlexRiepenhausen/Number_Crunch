@@ -8,7 +8,7 @@
 #include <circular_buffer.h>
 
 /*! multicast routing keys to communicate with neighbours */
-uint my_key;
+unsigned int *key_values;
 
 /*! buffer used to store spikes */
 static circular_buffer input_buffer;
@@ -46,7 +46,7 @@ typedef enum callback_priorities{
 
 //! human readable definitions of each element in the transmission region
 typedef enum transmission_region_elements {
-    HAS_KEY, MY_KEY
+    KEY_ONE_EXISTS, KEY_ONE, KEY_TWO_EXISTS, KEY_TWO
 } transmission_region_elements;
 
 //! values for the states
@@ -134,7 +134,7 @@ struct index_info {
 	/* Tells you the highest id number on this vertex
 	 */
 
-	unsigned int message_0000_sent;
+	unsigned int  message_0000_sent;
 	/* A flag that tells you if this vertex already
 	 * sent 0-0-0-0 to its neighbour
 	 * If that is the case, all the vertex has to do upon receiving
@@ -159,18 +159,24 @@ void send_empty_string_to_next_vertex_with_id(unsigned int id);
 void forward_string_message_to_next_vertex_with_id();
 
 void start_processing();
+
 void initialise_index();
 void complete_index(unsigned int unique_id, unsigned int start_index);
 unsigned int update_index_upon_message_received();
 void index_receive(uint payload);
 void index_message_reached_sender();
-void count_function_start();
-void count_function_receive(uint payload);
 
 void count_function_start();
 void count_function_receive(uint payload);
 
-void send_state(uint payload, uint delay);
+void leader_blast();
+void leader_collects_reports(uint payload);
+void report_to_leader(uint payload);
+
+void count_function_start();
+void count_function_receive(uint payload);
+
+void send_state(uint payload, uint key);
 void receive_data(uint key, uint payload);
 
 void retrieve_header_data();
@@ -261,13 +267,13 @@ void send_string_to_next_vertex_with_id(unsigned int data_entry_position) {
 	    }
 
 		//send the first data entry to the next core - 4 spikes
-		send_state(entry[0], 3);
-		send_state(entry[1], 3);
-		send_state(entry[2], 3);
-		send_state(entry[3], 3);
+		send_state(entry[0], 1);
+		send_state(entry[1], 1);
+		send_state(entry[2], 1);
+		send_state(entry[3], 1);
 
 		//send the id of that entry
-		send_state(local_index.id_index[data_entry_position], 3);
+		send_state(local_index.id_index[data_entry_position], 1);
 
 		log_info("SEND OWN DATA MESSAGE");
 		log_info("%d",entry[0]);
@@ -283,11 +289,11 @@ void send_string_to_next_vertex_with_id(unsigned int data_entry_position) {
 void send_empty_string_to_next_vertex_with_id(unsigned int id) {
 
 	//take every column of strings and assign an unique id to each string
-	send_state( 0, 3);
-	send_state( 0, 3);
-	send_state( 0, 3);
-	send_state( 0, 3);
-	send_state(id, 3);
+	send_state( 0, 1);
+	send_state( 0, 1);
+	send_state( 0, 1);
+	send_state( 0, 1);
+	send_state(id, 1);
 
 	log_info("SEND 0-0-0-0");
 
@@ -295,11 +301,11 @@ void send_empty_string_to_next_vertex_with_id(unsigned int id) {
 
 void forward_string_message_to_next_vertex_with_id() {
 
-	send_state(local_index.message[0], 3);
-	send_state(local_index.message[1], 3);
-	send_state(local_index.message[2], 3);
-	send_state(local_index.message[3], 3);
-	send_state(local_index.message_id, 3);
+	send_state(local_index.message[0], 1);
+	send_state(local_index.message[1], 1);
+	send_state(local_index.message[2], 1);
+	send_state(local_index.message[3], 1);
+	send_state(local_index.message_id, 1);
 
 	log_info("FORWARD MESSAGE");
 	log_info("%d",local_index.message[0]);
@@ -338,6 +344,12 @@ void start_processing() {
 
 			 break;
 
+		case 3 :
+
+			 //if you are the leader
+			 if(header.initiate_send == 1) {leader_blast();}
+		     break;
+
 	    default :
 	    	log_info("No function selected");
 
@@ -360,7 +372,7 @@ void initialise_index() {
 	if(header.num_string_cols != 0 && header.num_rows != 0) {
 
 		//assign 0 to every index
-		unsigned int i = 0;
+		unsigned int i;
 	    for(i = 0; i < header.num_rows; i++) {
 	    	local_index.id_index[i] = 0;
 	    }
@@ -674,7 +686,7 @@ void count_function_start() {
 	if(header.initiate_send == 1) {
 		log_info("solution: %d", header.num_rows);
 		record_int_entry(header.num_rows);
-		send_state(header.num_rows, 3);
+		send_state(header.num_rows, 1);
 	}
 
 }
@@ -685,9 +697,34 @@ void count_function_receive(uint payload) {
 	//if we have reached the original vertex, stop the entire mechanism
 	if(header.initiate_send == 0){
 		payload = payload + header.num_rows;
-		send_state(payload, 3);
+		send_state(payload, 1);
 		log_info("solution: %d", payload);
 		record_int_entry(payload);
+	}
+
+}
+
+void leader_blast() {
+	log_info("Commander in chief: %d", 1);
+	send_state(1, 2);
+}
+
+void report_to_leader(uint payload) {
+	log_info("Command received: %d", payload);
+	record_int_entry(payload);
+	send_state(payload,2);
+}
+
+unsigned int report = 0;
+unsigned int reports_received = 0;
+void leader_collects_reports(uint payload) {
+
+	reports_received++;
+	if(reports_received < 15) {
+	    report = report + payload;
+	}
+	else {
+		record_int_entry(report + payload);
 	}
 
 }
@@ -697,15 +734,15 @@ void count_function_receive(uint payload) {
 // SEND_STATE, RECEIVE_DATA                                                                      //
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void send_state(uint payload, uint delay) {
+void send_state(uint payload, uint partition_number) {
 
     // reset for next iteration
     alive_states_recieved_this_tick = 0;
     dead_states_recieved_this_tick = 0;
 
     // send my new state to the simulation neighbours
-    while (!spin1_send_mc_packet(my_key, payload, WITH_PAYLOAD)) {
-        spin1_delay_us(delay);
+    while (!spin1_send_mc_packet(key_values[partition_number-1], payload, WITH_PAYLOAD)) {
+        spin1_delay_us(1);
     }
 
     log_debug("sent my state via multicast");
@@ -733,6 +770,10 @@ void receive_data(uint key, uint payload) {
 		case 2 :
 			 index_receive(payload);
 	         break;
+		case 3 :
+			 if(header.initiate_send == 0){report_to_leader(payload);}
+			 else{leader_collects_reports(payload);}
+			 break;
 	    default :
 	    	log_info("No function selected");
 	}
@@ -782,7 +823,7 @@ void record_solution() {
     address_t data_address =
         data_specification_get_region(INPUT_DATA, address);
 
-    unsigned int i,j = 0;
+    unsigned int i,j;
 
     for(i = 0; i < header.num_rows; i++){
 
@@ -932,13 +973,19 @@ static bool initialize(uint32_t *timer_period) {
     // initialise transmission keys
     address_t transmission_region_address = data_specification_get_region(
             TRANSMISSIONS, address);
-    if (transmission_region_address[HAS_KEY] == 1) { //for some reason this is 0
-        my_key = transmission_region_address[MY_KEY];
-        log_info("my key is %d\n", my_key);
+
+    if (transmission_region_address[0] > 0) {
+
+    	unsigned int number_of_keys = transmission_region_address[0];
+    	key_values = malloc(sizeof(unsigned int) * number_of_keys);
+    	log_info("number keys", number_of_keys);
+    	for(unsigned int i = 0; i < number_of_keys; i++) {
+        	key_values[i] = transmission_region_address[2*i + 1];
+            log_info("my key is %d\n", key_values[i]);
+    	}
+
     } else {
-        log_error(
-            "this conways cell can't effect anything, deduced as an error,"
-            "please fix the application fabric and try again\n");
+        log_error("please fix the application fabric and try again\n");
         return false;
     }
 
