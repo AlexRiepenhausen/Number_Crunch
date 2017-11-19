@@ -81,7 +81,7 @@ def load_data_onto_vertices(total_number_of_cores, data):
             "num_string_cols": 1,
             "entries":         data_parcel,
             "initiate":        initiate,
-            "function_id":     3,
+            "function_id":     2,
             "state":           x
             },
             label="Data packet at x {}".format(x))   
@@ -114,11 +114,11 @@ volume_per_core = total_number_of_items/total_number_of_cores
 
 load_data_onto_vertices(total_number_of_cores, raw_data)
 
-front_end.run(400)
+front_end.run(300)
 
 placements = front_end.placements()
 buffer_manager = front_end.buffer_manager()
 
-display_results_function_one()
+display_results_function_two()
 
 front_end.stop()

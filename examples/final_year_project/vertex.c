@@ -276,11 +276,6 @@ void send_string_to_next_vertex_with_id(unsigned int data_entry_position) {
 		send_state(local_index.id_index[data_entry_position], 1);
 
 		log_info("SEND OWN DATA MESSAGE");
-		log_info("%d",entry[0]);
-		log_info("%d",entry[1]);
-		log_info("%d",entry[2]);
-		log_info("%d",entry[3]);
-		log_info("%d",local_index.id_index[data_entry_position]);
 
 	}
 
@@ -308,11 +303,6 @@ void forward_string_message_to_next_vertex_with_id() {
 	send_state(local_index.message_id, 1);
 
 	log_info("FORWARD MESSAGE");
-	log_info("%d",local_index.message[0]);
-	log_info("%d",local_index.message[1]);
-	log_info("%d",local_index.message[2]);
-	log_info("%d",local_index.message[3]);
-	log_info("%d",local_index.message_id);
 
 }
 
@@ -614,7 +604,6 @@ void index_receive(uint payload) {
 
 			}
 
-			//record the information - every vertex will reach this piece of code only once
 			record_solution();
 
 		}
@@ -924,16 +913,16 @@ void update(uint ticks, uint b) {
     if (time == 1) {
     	retrieve_header_data();
     	start_processing();
-    } else if (time == 400) {
+    }
+    else if(time == 300) {
         iobuf_data();
     }
 
     // trigger buffering_out_mechanism
-    log_info("recording flags is %d", recording_flags);
+    //log_info("recording flags is %d", recording_flags);
     if (recording_flags > 0) {
-        log_info("doing timer tick update\n");
+        //log_info("doing timer tick update\n");
         recording_do_timestep_update(time);
-        log_info("done timer tick update\n");
     }
 }
 

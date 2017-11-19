@@ -168,7 +168,7 @@ class Vertex(
                 raise exceptions.ConfigurationException(
                     "I'm connected to myself, this is deemed an error"
                     " please fix.")   
-        
+                
         for partition in partitions:      
                
             spec.switch_write_focus(region=self.DATA_REGIONS.TRANSMISSIONS.value)
@@ -251,7 +251,7 @@ class Vertex(
         
         spec.reserve_memory_region(
             region=self.DATA_REGIONS.OUTPUT_DATA.value,
-            size=recording_utilities.get_recording_header_size(1),
+            size=self._output_data_size,
             label="Output_data")
         
         # edge requirements
