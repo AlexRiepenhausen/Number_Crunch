@@ -14,77 +14,128 @@ make
 '''-----------------------------------------------------------------------------------------------------'''
 
 from edges.circle import make_circle
-from utilities.parser import parser
 from vertex import Vertex 
+from utilities.parser import parser
 
 import spinnaker_graph_front_end as front_end
 import logging
 import os
+import math
 
 '''-----------------------------------------------------------------------------------------------------'''
 
 def display_results_function_one():
     
-        for placement in sorted(placements.placements,
-            key=lambda p: (p.x, p.y, p.p)):
+    for placement in sorted(placements.placements,
+        key=lambda p: (p.x, p.y, p.p)):
 
-            if isinstance(placement.vertex, Vertex):
-                result = placement.vertex.read(placement, buffer_manager)
-                logger.info("{}, {}, {} > {}".format(
-                placement.x, placement.y, placement.p, result))
-    
+        if isinstance(placement.vertex, Vertex):
+            result = placement.vertex.read(placement, buffer_manager)
+            logger.info("{}, {}, {} > {}".format(
+            placement.x, placement.y, placement.p, result))
 
 def display_results_function_two():
 
-        for placement in sorted(placements.placements,
-            key=lambda p: (p.x, p.y, p.p)):
+    for placement in sorted(placements.placements,
+        key=lambda p: (p.x, p.y, p.p)):
 
-            if isinstance(placement.vertex, Vertex):
+        if isinstance(placement.vertex, Vertex):
         
-                result = placement.vertex.read(placement, buffer_manager)
+            result = placement.vertex.read(placement, buffer_manager)
          
-                logger.info("|----------------|----|") 
-                logger.info("| Core {}, {}, {}".format(placement.x, placement.y, placement.p))   
-                logger.info("|----------------|----|") 
+            logger.info("|----------------|----|") 
+            logger.info("| Core {}, {}, {}".format(placement.x, placement.y, placement.p))   
+            logger.info("|----------------|----|") 
         
-            for x in range(0, 4):
-                start = 0  + 16*x;
-                end   = 15 + 16*x;
-                logger.info("| {}| {}".format(result[start:end],result[start+64:end+64]))
+        for x in range(0, 4):
+            start = 0  + 16*x;
+            end   = 15 + 16*x;
+            logger.info("| {}| {}".format(result[start:end],result[start+64:end+64]))
+                            
+def write_unique_ids_to_csv(getData,number_of_chips,num_data_rows):
+    
+    num_processors = number_of_chips * 16
+    rows_per_core = int(math.floor(num_data_rows/num_processors))
+    
+    leftovers = num_data_rows % num_processors
+    core = 0
+    
+    id_array = []
+    
+    for placement in sorted(placements.placements,
+        key=lambda p: (p.x, p.y, p.p)):
 
+        if isinstance(placement.vertex, Vertex):
+            result = placement.vertex.read(placement, buffer_manager)
+        
+        add_left_over = 0
+        if core < leftovers:
+            add_left_over = 1
+        
+        for x in range(0, rows_per_core + add_left_over):
+            start = 0   + 10*x;
+            end   = 9   + 10*x;
+            id_array.append(''.join(chr(i) for i in result[start:end]))
+            #print ''.join(chr(i) for i in result[start:end])
+            
+        core = core + 1
+        
+    getData.write_to_csv('../../resources/output.csv', id_array)
+    
 '''-----------------------------------------------------------------------------------------------------'''
 
-def load_data_onto_vertices(total_number_of_cores, data):
+def load_data_onto_vertices(data, number_of_chips, columns, num_string_cols, function_id):
     
     #get rid of the headers
     del data[0]
+    
+    num_processors = number_of_chips * 16
+    num_data_rows  = len(data)
+    
+    rows_per_core = int(math.floor(num_data_rows/num_processors))
+    
+    leftovers = num_data_rows % num_processors
+    
+    row_count = 0
 
     vertices = []
-    for x in range(0, 16):
+    for core in range(0, num_processors):
             
         #initiate if this is the first vertex in the circle
         initiate = 0
-        if x%16 == 0:
+        if core%16 == 0:
             initiate = 1
+          
+        #distribute the data evenly among the cores
+        add_leftover = 0
+        if core < leftovers:
+            add_leftover = 1
             
-        data_parcel = [data[x+ 0][0],data[x+ 0][1]], \
-                      [data[x+16][0],data[x+16][1]], \
-                      [data[x+32][0],data[x+32][1]], \
-                      [data[x+48][0],data[x+48][1]]
-                                 
+        data_parcel = [] 
+        
+        for row in range(0, rows_per_core + add_leftover):
+            
+            data_row = []  
+            for z in range(0, len(columns)):
+                data_row.append(data[row_count][columns[z]])
+            
+            row_count = row_count + 1  
+            data_parcel.append(data_row)
+            
+        #load information onto the vertex             
         current_vertex = front_end.add_machine_vertex(
             Vertex,
             {
-            "columns":         2,
-            "rows":            4,
+            "columns":         len(columns),
+            "rows":            rows_per_core + add_leftover,
             "string_size":     16,
-            "num_string_cols": 1,
+            "num_string_cols": num_string_cols,
             "entries":         data_parcel,
             "initiate":        initiate,
-            "function_id":     2,
-            "state":           x
+            "function_id":     function_id,
+            "state":           core
             },
-            label="Data packet at x {}".format(x))   
+            label="Data packet at x {}".format(core))   
            
         vertices.append(current_vertex)   
             
@@ -107,18 +158,18 @@ calculate total number of 'free' cores for the given board
 total_number_of_cores = \
     front_end.get_number_of_available_cores_on_machine()
 
-'''
-determine the data volume each core should take'''
-total_number_of_items = len(raw_data) - 1
-volume_per_core = total_number_of_items/total_number_of_cores
+#param1: data
+#param2: number of chips used
+#param3: what columns to use
+#param4: how many string columns exist?
+#param5: function id
+load_data_onto_vertices(raw_data, 1, [0], 1, 2)
 
-load_data_onto_vertices(total_number_of_cores, raw_data)
-
-front_end.run(300)
+front_end.run(1000)
 
 placements = front_end.placements()
 buffer_manager = front_end.buffer_manager()
 
-display_results_function_two()
+write_unique_ids_to_csv(getData,1,len(raw_data))
 
 front_end.stop()

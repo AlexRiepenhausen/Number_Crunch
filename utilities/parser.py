@@ -23,3 +23,12 @@ class parser(object):
                 
             #return the data
             return data_parcel
+    
+    def write_to_csv(self, new_filename, array):
+        
+        with open(new_filename, "wb") as f:
+            writer = csv.writer(f)
+            
+            writer.writerow(["Unique IDs"])
+            for row in range (0, len(array)):
+                writer.writerow([array[row]])

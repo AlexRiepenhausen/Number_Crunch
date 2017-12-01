@@ -66,6 +66,9 @@ typedef enum initial_state_region_elements {
 
 struct header_info {
 
+   unsigned int processor_id;
+   /* The id of the processor */
+
    unsigned int num_cols;
    /* number of columns
     * in the original csv file
@@ -162,7 +165,7 @@ void start_processing();
 
 void initialise_index();
 void complete_index(unsigned int unique_id, unsigned int start_index);
-unsigned int update_index_upon_message_received();
+void update_index_upon_message_received();
 void index_receive(uint payload);
 void index_message_reached_sender();
 
@@ -180,7 +183,6 @@ void send_state(uint payload, uint key);
 void receive_data(uint key, uint payload);
 
 void retrieve_header_data();
-void record_solution();
 void record_string_entry(unsigned int *int_arr);
 void record_int_entry(unsigned int solution);
 
@@ -204,10 +206,10 @@ void iobuf_data(){
     address_t data_address =
         data_specification_get_region(INPUT_DATA, address);
 
-    log_info("Data address is %08x", data_address);
+    //log_info("Data address is %08x", data_address);
 
     int* my_string = (int *) &data_address[0];
-    log_info("Data read is: %s", my_string);
+    //log_info("Data read is: %s", my_string);
 }
 
 unsigned int compare_two_strings(unsigned int *string_1, unsigned int *string_2) {
@@ -253,8 +255,8 @@ void send_string_to_next_vertex_with_id(unsigned int data_entry_position) {
 	//make sure any non-integer entries do exist
 	if(header.num_string_cols != 0 && header.num_rows != 0) {
 
-    	unsigned int start = 6  + 4 * data_entry_position;
-    	unsigned int end   = 10 + 4 * data_entry_position;
+    	unsigned int start = 7  + 4 * data_entry_position;
+    	unsigned int end   = 11 + 4 * data_entry_position;
     	unsigned int count = 0;
 
     	unsigned int i;
@@ -267,15 +269,15 @@ void send_string_to_next_vertex_with_id(unsigned int data_entry_position) {
 	    }
 
 		//send the first data entry to the next core - 4 spikes
-		send_state(entry[0], 1);
-		send_state(entry[1], 1);
-		send_state(entry[2], 1);
-		send_state(entry[3], 1);
+		send_state(entry[0], 2);
+		send_state(entry[1], 2);
+		send_state(entry[2], 2);
+		send_state(entry[3], 2);
 
 		//send the id of that entry
-		send_state(local_index.id_index[data_entry_position], 1);
+		send_state(local_index.id_index[data_entry_position], 2);
 
-		log_info("SEND OWN DATA MESSAGE");
+		//log_info("SEND OWN DATA MESSAGE");
 
 	}
 
@@ -284,25 +286,25 @@ void send_string_to_next_vertex_with_id(unsigned int data_entry_position) {
 void send_empty_string_to_next_vertex_with_id(unsigned int id) {
 
 	//take every column of strings and assign an unique id to each string
-	send_state( 0, 1);
-	send_state( 0, 1);
-	send_state( 0, 1);
-	send_state( 0, 1);
-	send_state(id, 1);
+	send_state( 0, 2);
+	send_state( 0, 2);
+	send_state( 0, 2);
+	send_state(header.processor_id, 2);
+	send_state(id, 2);
 
-	log_info("SEND 0-0-0-0");
+	//log_info("SEND 0-0-0-0");
 
 }
 
 void forward_string_message_to_next_vertex_with_id() {
 
-	send_state(local_index.message[0], 1);
-	send_state(local_index.message[1], 1);
-	send_state(local_index.message[2], 1);
-	send_state(local_index.message[3], 1);
-	send_state(local_index.message_id, 1);
+	send_state(local_index.message[0], 2);
+	send_state(local_index.message[1], 2);
+	send_state(local_index.message[2], 2);
+	send_state(local_index.message[3], 2);
+	send_state(local_index.message_id, 2);
 
-	log_info("FORWARD MESSAGE");
+	//log_info("FORWARD MESSAGE");
 
 }
 
@@ -328,7 +330,9 @@ void start_processing() {
 			 //start if index is complete - this only happens with the leader vertex in the beginning
 			 if(local_index.index_complete == 1) {
 				 //record the index information
-				 record_solution();
+				 for(unsigned int i = 0; i < header.num_rows; i++) {
+					 record_int_entry(local_index.id_index[i]);
+				 }
 				 send_string_to_next_vertex_with_id(0); //-> first entry
 			 }
 
@@ -340,8 +344,8 @@ void start_processing() {
 			 if(header.initiate_send == 1) {leader_blast();}
 		     break;
 
-	    default :
-	    	log_info("No function selected");
+	    //default :
+	    	//log_info("No function selected");
 
 	}
 
@@ -392,8 +396,8 @@ void complete_index(unsigned int unique_id, unsigned int start_index) {
 
     for(i = start_index; i < header.num_rows; i++) {
 
-    	unsigned int start = 6  + 4*i;
-    	unsigned int end   = 10 + 4*i;
+    	unsigned int start = 7  + 4*i;
+    	unsigned int end   = 11 + 4*i;
     	unsigned int count = 0;
 
     	//current entry
@@ -418,8 +422,8 @@ void complete_index(unsigned int unique_id, unsigned int start_index) {
         	//if id is 0, check for identical previous entries
             for(k = 0; k < i; k++) {
 
-    	    	unsigned int start2 = 6  + 4*k;
-    	    	unsigned int end2   = 10 + 4*k;
+    	    	unsigned int start2 = 7  + 4*k;
+    	    	unsigned int end2   = 11 + 4*k;
     	    	unsigned int count2 = 0;
 
     	    	//past entry
@@ -458,7 +462,7 @@ void complete_index(unsigned int unique_id, unsigned int start_index) {
 
     }
 
-    log_info("Finished, Unique id %d", unique_id);
+    //log_info("Finished, Unique id %d", unique_id);
 
 
     //all data entries have a non zero index assigned to them
@@ -466,63 +470,58 @@ void complete_index(unsigned int unique_id, unsigned int start_index) {
 
 }
 
-unsigned int update_index_upon_message_received() {
+void update_index_upon_message_received() {
 
-	//return 1 if the received message was sent by this vertex
-	//else return 0
+	//goes through the index and replaces all elements that match with the
+	//spike message with the id contained within the message
+    address_t address = data_specification_get_data_address();
+    address_t data_address =
+        data_specification_get_region(INPUT_DATA, address);
 
-    //skip this function if message_0000 already sent
-    if(local_index.message_0000_sent != 1) {
+    do_zeros_exist = 0;
 
-    	//goes through the index and replaces all elements that match with the
-    	//spike message with the id contained within the message
-        address_t address = data_specification_get_data_address();
-        address_t data_address =
-            data_specification_get_region(INPUT_DATA, address);
+	unsigned int i,j;
+    for(i = 0; i < header.num_rows; i++) {
 
-    	unsigned int i,j;
-        for(i = 0; i < header.num_rows; i++) {
+    	unsigned int start = 7  + 4 * i;
+    	unsigned int end   = 11 + 4 * i;
+    	unsigned int count = 0;
 
-        	unsigned int start = 6  + 4 * i;
-        	unsigned int end   = 10 + 4 * i;
-        	unsigned int count = 0;
+    	unsigned int current_entry[4];
 
-        	unsigned int current_entry[4];
+    	//current entry
+	    for(j = start; j < end; j++) {
+	    	current_entry[count] = *(&data_address[j]);
+	    	count++;
+	    }
 
-        	//current entry
-    	    for(j = start; j < end; j++) {
-    	    	current_entry[count] = *(&data_address[j]);
-    	    	count++;
-    	    }
+    	if(compare_two_strings(current_entry,local_index.message) == 1) {
 
-        	if(compare_two_strings(current_entry,local_index.message) == 1) {
+    		if(local_index.id_index[i] == 0) {
 
-        		//check if the id has already been assigned;
-        		//if that is the case you completed the ring (as in the message went through all cores already)
-        		if(local_index.id_index[i] != 0) {
-        			index_message_reached_sender();
-        			return 1;
-        		}
-        		else {
+    			do_zeros_exist = 1;
 
-        			//update the index if it is still 0
-            	    local_index.id_index[i] = local_index.message_id;
+    			//update the index if it is still 0
+        	    local_index.id_index[i] = local_index.message_id;
 
-            	    //make sure that local_index.max_id is updated as well
-        			if(local_index.max_id < local_index.message_id){
-            			local_index.max_id = local_index.message_id;
-        			}
+        	    //make sure that local_index.max_id is updated as well
+    			if(local_index.max_id < local_index.message_id){
+        			local_index.max_id = local_index.message_id;
+    			}
 
-        		}
+    		}
+    		else {
+    			//nothing to update
+    			break;
+    		}
 
-        	}
+    	}
 
-        }//for
+    }//for
 
-    }//if message_0000_sent != 1
-
-    return 0;
-
+    if(do_zeros_exist == 0){
+    	local_index.index_complete = 1;
+    }
 
 }
 
@@ -540,46 +539,32 @@ void index_receive(uint payload) {
 		//Check if all messages are 0
 		unsigned int i;
 		unsigned int flag = 1;
-		for(i = 0; i < 4; i++) {
+		for(i = 0; i < 3; i++) {
 			if(local_index.message[i] != 0){
 				flag = 0;
 				break;
 			}
 		}
 
-		log_info("Number of messages received: %d", local_index.messages_received);
+		//log_info("Number of messages received: %d", local_index.messages_received);
 
-		//not a 0-0-0-0 message
+		//not a 0-0-0-0-0 message
 		if(flag == 0){
-			log_info("A normal message");
-			unsigned int message_received_sender = update_index_upon_message_received();
+			//log_info("A normal message");
 
-		    //forward string to next vertex if this message did not originate from this vertex
-            if(message_received_sender == 0){
-    			forward_string_message_to_next_vertex_with_id();
-            }
+			if(local_index.index_complete != 1){
+				update_index_upon_message_received();
+			}
 
 		}
 
-		//a 0-0-0-0 message -> That means
-		//that the previous vertex already has a complete index AND
-		//the vertex made sure that all its data entry indices
-		//are up to date across the network -> For this processing step,
-		//the current vertex now becomes the leader
-
-		//ignore messages if message_0000_has been sent already
+		//that means the or some other core is done
 		if(flag == 1) {
 
-			log_info("A zero message");
+			//id of processor that sent the message
+			local_index.message[3];
 
-			//terminate the proces if message_0000_sent == 1
-			//that means that all id_indexes in all vertices had been synchronised
-			if(local_index.message_0000_sent == 1) {
-				log_info("TERMINATED");
-				return;
-			}
-
-			//Make sure that the index is complete - if not, take necessary steps
+     		//Make sure that the index is complete
 			int zeros_exist = find_instance_of(0,0); //find first occurence of 0 index
 
 			//zeros exist
@@ -604,7 +589,9 @@ void index_receive(uint payload) {
 
 			}
 
-			record_solution();
+		    for(unsigned int i = 0; i < header.num_rows; i++) {
+		        record_int_entry(local_index.id_index[i]);
+		    }
 
 		}
 
@@ -613,55 +600,6 @@ void index_receive(uint payload) {
 	else {
 		//take incoming message
 		local_index.message[(local_index.messages_received % 5) - 1] = payload;
-	}
-
-	log_info("upon receive:");
-	log_info("id_1: %d",local_index.id_index[0]);
-	log_info("id_2: %d",local_index.id_index[1]);
-	log_info("idmax %d",local_index.max_id);
-
-}
-
-void index_message_reached_sender() {
-
-	log_info("Message id: %d, Max id: %d",local_index.message_id,local_index.max_id);
-
-	//1st scenario: The message_id is smaller than the max_id
-	if(local_index.message_id < local_index.max_id) {
-
-		//take the entry with id local_index.message_id + 1 and repeat the process
-		unsigned int new_id = local_index.message_id + 1;
-		int index = find_instance_of(new_id, 0);
-
-		//go to the next existing id
-		while(index == -1) {
-			new_id = new_id + 1;
-			if(new_id > local_index.max_id) {break;}
-			index  = find_instance_of(new_id, 0);
-		}
-
-		//send a new entry around with its id
-		if(index != -1) {
-			send_string_to_next_vertex_with_id(index);
-		}
-		else {
-			log_info("This should not happen - error");
-		}
-
-	}
-
-	//2nd scenario: The message_id is exactly the same as the max_id
-	if(local_index.message_id == local_index.max_id) {
-
-		//forward 0 0 0 0 and max_id + 1
-		send_empty_string_to_next_vertex_with_id(local_index.max_id + 1);
-
-		//set local_index.message_0000_sent to 1,
-		//so that update_index_upon_message_received doesn't need to be invoked again
-		log_info("FINISH");
-
-		local_index.message_0000_sent = 1;
-
 	}
 
 }
@@ -673,7 +611,7 @@ void count_function_start() {
 
 	//send the first MCPL package if initiate is TRUE
 	if(header.initiate_send == 1) {
-		log_info("solution: %d", header.num_rows);
+		//log_info("solution: %d", header.num_rows);
 		record_int_entry(header.num_rows);
 		send_state(header.num_rows, 1);
 	}
@@ -687,19 +625,19 @@ void count_function_receive(uint payload) {
 	if(header.initiate_send == 0){
 		payload = payload + header.num_rows;
 		send_state(payload, 1);
-		log_info("solution: %d", payload);
+		//log_info("solution: %d", payload);
 		record_int_entry(payload);
 	}
 
 }
 
 void leader_blast() {
-	log_info("Commander in chief: %d", 1);
+	//log_info("Commander in chief: %d", 1);
 	send_state(1, 2);
 }
 
 void report_to_leader(uint payload) {
-	log_info("Command received: %d", payload);
+	//log_info("Command received: %d", payload);
 	record_int_entry(payload);
 	send_state(payload,2);
 }
@@ -734,7 +672,7 @@ void send_state(uint payload, uint partition_number) {
         spin1_delay_us(1);
     }
 
-    log_debug("sent my state via multicast");
+    //log_debug("sent my state via multicast");
 
 }
 
@@ -743,12 +681,12 @@ void receive_data(uint key, uint payload) {
    //uint key: packet routing key - provided by the RTS
    //uint payload: packet payload - provided by the RTS
 
-   log_info("the key i've received is %d\n", key);
-   log_info("the payload i've received is %d\n", payload);
+   //log_info("the key i've received is %d\n", key);
+   //log_info("the payload i've received is %d\n", payload);
 
    //If there was space to add spike to incoming spike queue
    if (!circular_buffer_add(input_buffer, payload)) {
-       log_info("Could not add state");
+       //log_info("Could not add state");
    }
 
    //depending on the function, select a way to handle the incoming message
@@ -763,8 +701,8 @@ void receive_data(uint key, uint payload) {
 			 if(header.initiate_send == 0){report_to_leader(payload);}
 			 else{leader_collects_reports(payload);}
 			 break;
-	    default :
-	    	log_info("No function selected");
+	    //default :
+	    	//log_info("No function selected");
 	}
 
 }
@@ -778,7 +716,7 @@ void retrieve_header_data() {
 
     uint chip = spin1_get_chip_id();
     uint core = spin1_get_core_id();
-    log_info("Issuing 'Vertex' from chip %d, core %d", chip, core);
+    //log_info("Issuing 'Vertex' from chip %d, core %d", chip, core);
 
     //access the partition of the SDRAM where input data is stored
     address_t address = data_specification_get_data_address();
@@ -788,54 +726,22 @@ void retrieve_header_data() {
     //header data that contains:
     //- The data description
     //- Processing instructions
-    header.num_cols        = data_address[0];
-	header.num_rows        = data_address[1];
-	header.string_size     = data_address[2];
-	header.num_string_cols = data_address[3];
-	header.initiate_send   = data_address[4];
-	header.function_id     = data_address[5];
+    header.processor_id    = data_address[0];
+    header.num_cols        = data_address[1];
+	header.num_rows        = data_address[2];
+	header.string_size     = data_address[3];
+	header.num_string_cols = data_address[4];
+	header.initiate_send   = data_address[5];
+	header.function_id     = data_address[6];
 
 	//log this information to iobuf
+	log_info("Processor id: %d", header.processor_id );
 	log_info("Num_cols: %d", header.num_cols );
 	log_info("Num_rows: %d", header.num_rows);
 	log_info("string_size: %d", header.string_size);
 	log_info("flag : %d", header.num_string_cols);
 	log_info("initate_send : %d", header.initiate_send);
 	log_info("function_id: %d", header.function_id);
-
-}
-
-void record_solution() {
-
-    //access the partition of the SDRAM where input data is stored
-    address_t address = data_specification_get_data_address();
-    address_t data_address =
-        data_specification_get_region(INPUT_DATA, address);
-
-    unsigned int i,j;
-
-    for(i = 0; i < header.num_rows; i++){
-
-    	unsigned int entry[4];
-
-    	unsigned int start = 6  + 4 * i;
-    	unsigned int end   = 10 + 4 * i;
-    	unsigned int count = 0;
-
-        for(j = start; j < end; j++){
-        	entry[count] = *(&data_address[j]);
-        	count++;
-        }
-
-        //record the data entry in the first recording region (which is OUTPUT)
-        record_string_entry(entry);
-
-    }
-
-    for(i = 0; i < header.num_rows; i++) {
-        record_int_entry(local_index.id_index[i]);
-    }
-
 
 }
 
@@ -854,29 +760,30 @@ void record_string_entry(unsigned int *int_arr) {
 	  buffer[size*i + 3] =  int_arr[i] & 0xFF;
 	}
 
-    log_info("String Entry : %s", buffer);
+    //log_info("String Entry : %s", buffer);
 
     //record the data entry in the first recording region (which is OUTPUT)
     bool recorded = recording_record(0, buffer, header.string_size * sizeof(unsigned char));
 
     if (!recorded) {
-        log_info("Information was not recorded...");
+        //log_info("Information was not recorded...");
     }
 
 }
 
 void record_int_entry(unsigned int solution) {
 
-	char result[16];
+	char result[10];
 	itoa(solution,result,10);
 
-    bool recorded = recording_record(0, result, header.string_size * sizeof(unsigned char));
+    //unsigned integers take 10 chars if represented as char arrays
+    bool recorded = recording_record(0, result, 10 * sizeof(unsigned char));
 
     if (!recorded) {
-        log_info("Information was not recorded...");
+        //log_info("Information was not recorded...");
     }
     else {
-    	log_info("Integer Entry: %d", solution);
+    	//log_info("Integer Entry: %d", solution);
     }
 
 }
@@ -892,14 +799,14 @@ void update(uint ticks, uint b) {
 
     time++;
 
-    log_info("on tick %d of %d", time, simulation_ticks);
+    //log_info("on tick %d of %d", time, simulation_ticks);
 
     // check that the run time hasn't already elapsed and thus needs to be killed
     if ((infinite_run != TRUE) && (time >= simulation_ticks)) {
-        log_info("Simulation complete.\n");
+        //log_info("Simulation complete.\n");
 
         if (recording_flags > 0) {
-            log_info("updating recording regions");
+            //log_info("updating recording regions");
             recording_finalise();
         }
 
@@ -914,7 +821,7 @@ void update(uint ticks, uint b) {
     	retrieve_header_data();
     	start_processing();
     }
-    else if(time == 300) {
+    else if(time == 1000) {
         iobuf_data();
     }
 
@@ -1033,4 +940,5 @@ void c_main() {
     time = UINT32_MAX;
 
     simulation_run();
+
 }
