@@ -149,20 +149,28 @@ struct index_info {
 
 struct index_info local_index;
 
+unsigned int reported_ready;
+unsigned int forward_mode_on;
+unsigned int current_leader;
+unsigned int global_max_id;
+unsigned int in_charge;
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // FUNCTION REFERENCES                                                                           //                                                                  //
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 void resume_callback();
 void iobuf_data();
+
 unsigned int compare_two_strings(unsigned int *string_1, unsigned int *string_2);
 unsigned int find_instance_of(unsigned int given_id, unsigned int offset);
-void send_string_to_next_vertex_with_id(unsigned int data_entry_position);
-void send_empty_string_to_next_vertex_with_id(unsigned int id);
-void forward_string_message_to_next_vertex_with_id();
+unsigned int identify_signal(unsigned int signal);
+
+void forward_string();
+void send_string(unsigned int data_entry_position);
+void send_signal(unsigned int id, unsigned int signal);
 
 void start_processing();
-
 void initialise_index();
 void complete_index(unsigned int unique_id, unsigned int start_index);
 void update_index_upon_message_received();
@@ -206,10 +214,7 @@ void iobuf_data(){
     address_t data_address =
         data_specification_get_region(INPUT_DATA, address);
 
-    //log_info("Data address is %08x", data_address);
-
     int* my_string = (int *) &data_address[0];
-    //log_info("Data read is: %s", my_string);
 }
 
 unsigned int compare_two_strings(unsigned int *string_1, unsigned int *string_2) {
@@ -245,7 +250,7 @@ unsigned int find_instance_of(unsigned int given_id, unsigned int offset) {
 
 }
 
-void send_string_to_next_vertex_with_id(unsigned int data_entry_position) {
+void send_string(unsigned int data_entry_position) {
 
 	//take every column of strings and assign an unique id to each string
     address_t address = data_specification_get_data_address();
@@ -277,26 +282,11 @@ void send_string_to_next_vertex_with_id(unsigned int data_entry_position) {
 		//send the id of that entry
 		send_state(local_index.id_index[data_entry_position], 2);
 
-		//log_info("SEND OWN DATA MESSAGE");
-
 	}
 
 }
 
-void send_empty_string_to_next_vertex_with_id(unsigned int id) {
-
-	//take every column of strings and assign an unique id to each string
-	send_state( 0, 2);
-	send_state( 0, 2);
-	send_state( 0, 2);
-	send_state(header.processor_id, 2);
-	send_state(id, 2);
-
-	//log_info("SEND 0-0-0-0");
-
-}
-
-void forward_string_message_to_next_vertex_with_id() {
+void forward_string() {
 
 	send_state(local_index.message[0], 2);
 	send_state(local_index.message[1], 2);
@@ -304,7 +294,32 @@ void forward_string_message_to_next_vertex_with_id() {
 	send_state(local_index.message[3], 2);
 	send_state(local_index.message_id, 2);
 
-	//log_info("FORWARD MESSAGE");
+}
+
+unsigned int identify_signal(unsigned int signal) {
+
+	unsigned int i;
+	for(i = 0; i < 3; i++) {
+		if(local_index.message[i] != signal) {
+			return 0;
+		}
+	}
+
+	return 1;
+
+}
+
+void send_signal(unsigned int id, unsigned int signal) {
+
+	//0 processing finished completely
+	//1 core ready for other tasks
+
+	//take every column of strings and assign an unique id to each string
+	send_state(signal, 2);
+	send_state(signal, 2);
+	send_state(signal, 2);
+	send_state(header.processor_id, 2);
+	send_state(id, 2);
 
 }
 
@@ -333,7 +348,8 @@ void start_processing() {
 				 for(unsigned int i = 0; i < header.num_rows; i++) {
 					 record_int_entry(local_index.id_index[i]);
 				 }
-				 send_string_to_next_vertex_with_id(0); //-> first entry
+				 global_max_id = 1;
+				 send_string(0); //-> first entry
 			 }
 
 			 break;
@@ -343,9 +359,6 @@ void start_processing() {
 			 //if you are the leader
 			 if(header.initiate_send == 1) {leader_blast();}
 		     break;
-
-	    //default :
-	    	//log_info("No function selected");
 
 	}
 
@@ -442,15 +455,12 @@ void complete_index(unsigned int unique_id, unsigned int start_index) {
 
         }
         else {
-        	//else make sure you do not assign unqiue_id if the id_index is not 0
         	assigned = 1;
         }
-
 
         //if no index assigned yet - that is the entry has not been spotted:
         if(assigned == 0){
         	local_index.id_index[i] = unique_id;
-        	local_index.max_id = unique_id;
 
     	    //make sure that local_index.max_id is updated as well
 			if(local_index.max_id < unique_id){
@@ -461,9 +471,6 @@ void complete_index(unsigned int unique_id, unsigned int start_index) {
         }
 
     }
-
-    //log_info("Finished, Unique id %d", unique_id);
-
 
     //all data entries have a non zero index assigned to them
     local_index.index_complete = 1;
@@ -477,8 +484,6 @@ void update_index_upon_message_received() {
     address_t address = data_specification_get_data_address();
     address_t data_address =
         data_specification_get_region(INPUT_DATA, address);
-
-    do_zeros_exist = 0;
 
 	unsigned int i,j;
     for(i = 0; i < header.num_rows; i++) {
@@ -499,8 +504,6 @@ void update_index_upon_message_received() {
 
     		if(local_index.id_index[i] == 0) {
 
-    			do_zeros_exist = 1;
-
     			//update the index if it is still 0
         	    local_index.id_index[i] = local_index.message_id;
 
@@ -519,87 +522,160 @@ void update_index_upon_message_received() {
 
     }//for
 
-    if(do_zeros_exist == 0){
-    	local_index.index_complete = 1;
-    }
-
 }
 
 void index_receive(uint payload) {
 
-	//wait until all 5 spikes received
-	//4 Spikes for the string info - 1 for the id
-
 	local_index.messages_received++;
 
-	if(local_index.messages_received % 5 == 0) {
+	//Case 1: You are the leader
+	if(header.processor_id % 16 == 0 && forward_mode_on == 0) {
 
-		local_index.message_id = payload;
-
-		//Check if all messages are 0
-		unsigned int i;
-		unsigned int flag = 1;
-		for(i = 0; i < 3; i++) {
-			if(local_index.message[i] != 0){
-				flag = 0;
-				break;
-			}
+		unsigned int cores_to_report = 15;
+		if(current_leader != header.processor_id) {
+			cores_to_report = 24;
 		}
 
-		//log_info("Number of messages received: %d", local_index.messages_received);
+		//see if everyone is ready
+		if(payload == 1){reported_ready++;}
+		if(reported_ready == cores_to_report){
 
-		//not a 0-0-0-0-0 message
-		if(flag == 0){
-			//log_info("A normal message");
+			reported_ready = 0;
 
-			if(local_index.index_complete != 1){
-				update_index_upon_message_received();
+			if(current_leader % 16 != 0) {
+				global_max_id++;
+				send_signal(global_max_id,1);
+				forward_mode_on = 1;
+			}
+
+			if(current_leader % 16 == 0) {
+
+				global_max_id++;
+				if(global_max_id <= local_index.max_id) {
+					send_string(find_instance_of(global_max_id,0));
+				}
+				else {
+	                send_signal(global_max_id,0);
+					current_leader = 1; //-> next core becomes the leader
+					forward_mode_on = 1;
+				}
+
 			}
 
 		}
-
-		//that means the or some other core is done
-		if(flag == 1) {
-
-			//id of processor that sent the message
-			local_index.message[3];
-
-     		//Make sure that the index is complete
-			int zeros_exist = find_instance_of(0,0); //find first occurence of 0 index
-
-			//zeros exist
-			if(zeros_exist != -1) {
-				//id = received message id, zeros_exist points to first item with id 0
-				complete_index(local_index.message_id, zeros_exist);
-
-				unsigned int data_entry_position = find_instance_of(local_index.message_id, 0);
-				send_string_to_next_vertex_with_id(data_entry_position);
-
-			}
-
-			//zeros don't exist -the index is complete:
-			//Here the index was completed through update_index_upon_message_received() alone - that means that
-			//there are no new items which can take an id that does not occurr in the previous vertex
-			if(zeros_exist == -1) {
-				local_index.index_complete = 1;
-
-				//send the zero message yourself
-				forward_string_message_to_next_vertex_with_id();
-				local_index.message_0000_sent = 1;
-
-			}
-
-		    for(unsigned int i = 0; i < header.num_rows; i++) {
-		        record_int_entry(local_index.id_index[i]);
-		    }
-
-		}
-
 
 	}
-	else {
-		//take incoming message
-		local_index.message[(local_index.messages_received % 5) - 1] = payload;
+
+	//Case 2: You are the original leader - now forwarding messages
+	if(header.processor_id % 16 == 0 && forward_mode_on == 1) {
+
+		//collect up to 5 messages
+		if(local_index.messages_received % 5 != 0) {
+			local_index.message[(local_index.messages_received % 5) - 1] = payload;
+		}
+
+		//all messages are collected
+		if(local_index.messages_received % 5 != 0) {
+
+			local_index.message_id = payload;
+
+			if(identify_signal(0) == 0) {
+				forward_string();
+				forward_mode_on = 0;
+			}
+
+			if(identify_signal(0) == 1) {
+
+				current_leader++;
+				if(current_leader <= 15) {
+					forward_string(); //-> next core becomes the leader
+					forward_mode_on = 1;
+				}
+
+			}
+
+		}
+
+	}
+
+
+	//Case 3: You are any one of the subordinates
+	if(header.processor_id % 16 != 0) {
+
+		//collect up to 5 messages
+		if(local_index.messages_received % 5 != 0) {
+			local_index.message[(local_index.messages_received % 5) - 1] = payload;
+		}
+		else {
+
+			local_index.message_id = payload;
+
+			if(in_charge == 0) {
+
+				if(identify_signal(0) == 1) {
+					if(local_index.message[3]+1 == header.processor_id){
+
+						in_charge = 1; //-> you are the new leader
+
+						global_max_id = local_index.message_id;
+
+			     		//Make sure that the index is complete
+						int zeros_exist = find_instance_of(0,0); //find first occurence of 0 index
+
+						//zeros exist
+						if(zeros_exist != -1) {
+							complete_index(global_max_id, zeros_exist);
+							send_string(zeros_exist);
+						}
+
+						//zeros don't exist
+						if(zeros_exist == -1) {
+							local_index.index_complete = 1;
+							send_signal(global_max_id,0);
+						}
+
+		    		    for(unsigned int i = 0; i < header.num_rows; i++) {
+		    		        record_int_entry(local_index.id_index[i]);
+		    		    }
+
+					}
+				}
+
+				if(identify_signal(0) == 0) {
+
+					if(local_index.index_complete == 0) {
+						update_index_upon_message_received();
+					}
+
+					send_state(1, 2); //report ready
+				}
+
+
+			}//if not in charge
+
+			if(in_charge == 1) {
+
+				if(identify_signal(1) == 1) {
+
+					global_max_id++;
+					if(global_max_id <= local_index.max_id) {
+						send_string(find_instance_of(global_max_id,0));
+					}
+					else {
+		                send_signal(global_max_id,0);
+		                in_charge = 0;
+		    		    for(unsigned int i = 0; i < header.num_rows; i++) {
+		    		        record_int_entry(local_index.id_index[i]);
+		    		    }
+
+					}
+				}
+
+			}//if in charge
+
+
+		}
+
 	}
 
 }
@@ -619,7 +695,6 @@ void count_function_start() {
 }
 
 void count_function_receive(uint payload) {
-    //forward the message to the next vertex (ring)
 
 	//if we have reached the original vertex, stop the entire mechanism
 	if(header.initiate_send == 0){
@@ -671,8 +746,6 @@ void send_state(uint payload, uint partition_number) {
     while (!spin1_send_mc_packet(key_values[partition_number-1], payload, WITH_PAYLOAD)) {
         spin1_delay_us(1);
     }
-
-    //log_debug("sent my state via multicast");
 
 }
 
@@ -733,6 +806,16 @@ void retrieve_header_data() {
 	header.num_string_cols = data_address[4];
 	header.initiate_send   = data_address[5];
 	header.function_id     = data_address[6];
+
+	reported_ready  = 0;
+	forward_mode_on = 0;
+	global_max_id   = 0;
+	in_charge       = 0;
+	current_leader  = 0;
+
+	if(header.initiate_send == 1) {
+		current_leader = header.processor_id;
+	}
 
 	//log this information to iobuf
 	log_info("Processor id: %d", header.processor_id );

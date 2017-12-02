@@ -71,12 +71,14 @@ def write_unique_ids_to_csv(getData,number_of_chips,num_data_rows):
         add_left_over = 0
         if core < leftovers:
             add_left_over = 1
-        
+        print "----"
+        print core
+        print "----"
         for x in range(0, rows_per_core + add_left_over):
             start = 0   + 10*x;
             end   = 9   + 10*x;
             id_array.append(''.join(chr(i) for i in result[start:end]))
-            #print ''.join(chr(i) for i in result[start:end])
+            print ''.join(chr(i) for i in result[start:end])
             
         core = core + 1
         
@@ -171,5 +173,4 @@ placements = front_end.placements()
 buffer_manager = front_end.buffer_manager()
 
 write_unique_ids_to_csv(getData,1,len(raw_data))
-
 front_end.stop()

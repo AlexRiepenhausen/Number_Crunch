@@ -79,7 +79,7 @@ class Vertex(
         '''
         allocate space for entries and 24 bytes for the 6 integers that make up the header information'''
         self._input_data_size  = (string_size * rows * num_string_cols) + \
-                                 (4           * rows * (columns - num_string_cols)) + 24
+                                 (4           * rows * (columns - num_string_cols)) + 28
         self._output_data_size = 10 * 10000
 
         # app specific elements
