@@ -71,14 +71,12 @@ def write_unique_ids_to_csv(getData,number_of_chips,num_data_rows):
         add_left_over = 0
         if core < leftovers:
             add_left_over = 1
-        print "----"
-        print core
-        print "----"
+
         for x in range(0, rows_per_core + add_left_over):
             start = 0   + 10*x;
             end   = 9   + 10*x;
             id_array.append(''.join(chr(i) for i in result[start:end]))
-            print ''.join(chr(i) for i in result[start:end])
+            #print ''.join(chr(i) for i in result[start:end])
             
         core = core + 1
         
@@ -146,7 +144,7 @@ def load_data_onto_vertices(data, number_of_chips, columns, num_string_cols, fun
 '''-----------------------------------------------------------------------------------------------------'''
         
 #read the csv data with help form the parser class
-getData = parser('../../resources/test.csv')
+getData = parser('../../resources/data.csv')
 raw_data = getData.read_data()
 
 logger = logging.getLogger(__name__)
@@ -167,7 +165,7 @@ total_number_of_cores = \
 #param5: function id
 load_data_onto_vertices(raw_data, 1, [0], 1, 2)
 
-front_end.run(1000)
+front_end.run(10000)
 
 placements = front_end.placements()
 buffer_manager = front_end.buffer_manager()

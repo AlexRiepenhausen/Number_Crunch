@@ -137,19 +137,12 @@ struct index_info {
 	/* Tells you the highest id number on this vertex
 	 */
 
-	unsigned int  message_0000_sent;
-	/* A flag that tells you if this vertex already
-	 * sent 0-0-0-0 to its neighbour
-	 * If that is the case, all the vertex has to do upon receiving
-	 * messages is to forward without invoking update_index_upon_message_received()
-	 */
-
-
 };
 
 struct index_info local_index;
 
 unsigned int reported_ready;
+unsigned int reports_collected;
 unsigned int forward_mode_on;
 unsigned int current_leader;
 unsigned int global_max_id;
@@ -282,6 +275,14 @@ void send_string(unsigned int data_entry_position) {
 		//send the id of that entry
 		send_state(local_index.id_index[data_entry_position], 2);
 
+		/*
+		log_info("SEND STRING");
+		log_info("M1: %d",entry[0]);
+		log_info("M2: %d",entry[1]);
+		log_info("M3: %d",entry[2]);
+		log_info("M4: %d",entry[3]);
+		log_info("M5: %d",local_index.id_index[data_entry_position]); */
+
 	}
 
 }
@@ -293,6 +294,14 @@ void forward_string() {
 	send_state(local_index.message[2], 2);
 	send_state(local_index.message[3], 2);
 	send_state(local_index.message_id, 2);
+
+	/*
+	log_info("FORWARD");
+	log_info("M1: %d",local_index.message[0]);
+	log_info("M2: %d",local_index.message[1]);
+	log_info("M3: %d",local_index.message[2]);
+	log_info("M4: %d",local_index.message[3]);
+	log_info("M5: %d",local_index.message_id); */
 
 }
 
@@ -320,6 +329,14 @@ void send_signal(unsigned int id, unsigned int signal) {
 	send_state(signal, 2);
 	send_state(header.processor_id, 2);
 	send_state(id, 2);
+
+	/*
+	log_info("SIGNAL");
+	log_info("M1: %d",signal);
+	log_info("M2: %d",signal);
+	log_info("M3: %d",signal);
+	log_info("M4: %d",header.processor_id);
+	log_info("M5: %d",id); */
 
 }
 
@@ -373,7 +390,6 @@ void initialise_index() {
     local_index.messages_received = 0;
     local_index.index_complete    = 0;
     local_index.max_id            = 0;
-    local_index.message_0000_sent = 0;
 
 	//make sure any non-integer entries do exist
 	if(header.num_string_cols != 0 && header.num_rows != 0) {
@@ -526,21 +542,20 @@ void update_index_upon_message_received() {
 
 void index_receive(uint payload) {
 
-	local_index.messages_received++;
-
-	//Case 1: You are the leader
+	//Case 1: You are the leader and waiting for reports
 	if(header.processor_id % 16 == 0 && forward_mode_on == 0) {
 
-		unsigned int cores_to_report = 15;
+		unsigned int cores_to_report = 15*9;
 		if(current_leader != header.processor_id) {
-			cores_to_report = 24;
+			cores_to_report = 14*9;
 		}
 
 		//see if everyone is ready
-		if(payload == 1){reported_ready++;}
+		if(payload == 9){reported_ready=reported_ready+9;}
 		if(reported_ready == cores_to_report){
 
 			reported_ready = 0;
+			reports_collected = 1;
 
 			if(current_leader % 16 != 0) {
 				global_max_id++;
@@ -569,15 +584,28 @@ void index_receive(uint payload) {
 	//Case 2: You are the original leader - now forwarding messages
 	if(header.processor_id % 16 == 0 && forward_mode_on == 1) {
 
+		local_index.messages_received++;
+
 		//collect up to 5 messages
 		if(local_index.messages_received % 5 != 0) {
-			local_index.message[(local_index.messages_received % 5) - 1] = payload;
-		}
 
-		//all messages are collected
-		if(local_index.messages_received % 5 != 0) {
+			local_index.message[(local_index.messages_received % 5) - 1] = payload;
+			//log_info("RECEIVED: %d", payload);
+
+			//temporary fix for a glitch - band aid
+			if(current_leader % 16 != 0 && reports_collected == 1) {
+				local_index.messages_received = 0;
+				reports_collected = 0;
+			}
+
+		}
+		else{
+
+			reports_collected = 0;
 
 			local_index.message_id = payload;
+			//log_info("RECEIVED: %d", payload);
+			//log_info("------------------");
 
 			if(identify_signal(0) == 0) {
 				forward_string();
@@ -589,6 +617,8 @@ void index_receive(uint payload) {
 				current_leader++;
 				if(current_leader <= 15) {
 					forward_string(); //-> next core becomes the leader
+					//log_info("max_id: %d", local_index.message_id);
+					//log_info("leader: %d", local_index.message[3]);
 					forward_mode_on = 1;
 				}
 
@@ -598,40 +628,46 @@ void index_receive(uint payload) {
 
 	}
 
-
 	//Case 3: You are any one of the subordinates
 	if(header.processor_id % 16 != 0) {
+
+		local_index.messages_received++;
 
 		//collect up to 5 messages
 		if(local_index.messages_received % 5 != 0) {
 			local_index.message[(local_index.messages_received % 5) - 1] = payload;
+			//log_info("RECEIVED: %d", payload);
 		}
 		else {
 
 			local_index.message_id = payload;
+			//log_info("RECEIVED: %d", payload);
+			//log_info("------------------");
 
 			if(in_charge == 0) {
+
+				//ignore 1-1-1 messages
+				if(identify_signal(1) == 1) {return;}
 
 				if(identify_signal(0) == 1) {
 					if(local_index.message[3]+1 == header.processor_id){
 
 						in_charge = 1; //-> you are the new leader
 
-						global_max_id = local_index.message_id;
-
 			     		//Make sure that the index is complete
 						int zeros_exist = find_instance_of(0,0); //find first occurence of 0 index
 
 						//zeros exist
 						if(zeros_exist != -1) {
-							complete_index(global_max_id, zeros_exist);
+							complete_index(local_index.message_id, zeros_exist);
 							send_string(zeros_exist);
 						}
 
 						//zeros don't exist
 						if(zeros_exist == -1) {
+							in_charge = 0;
 							local_index.index_complete = 1;
-							send_signal(global_max_id,0);
+							send_signal(local_index.message_id,0);
 						}
 
 		    		    for(unsigned int i = 0; i < header.num_rows; i++) {
@@ -647,9 +683,9 @@ void index_receive(uint payload) {
 						update_index_upon_message_received();
 					}
 
-					send_state(1, 2); //report ready
-				}
+					send_state(9, 2); //report ready
 
+				}
 
 			}//if not in charge
 
@@ -657,17 +693,19 @@ void index_receive(uint payload) {
 
 				if(identify_signal(1) == 1) {
 
-					global_max_id++;
-					if(global_max_id <= local_index.max_id) {
+					//log_info("SPARTA: %d", local_index.message_id);
+
+					//log_info("received: %d", local_index.message_id);
+					//log_info("max_id:   %d", local_index.max_id);
+
+					if(local_index.message_id <= local_index.max_id) {
 						send_string(find_instance_of(global_max_id,0));
 					}
 					else {
-		                send_signal(global_max_id,0);
+		                send_signal(local_index.message_id,0);
+		                log_info("OLD LEADER: %d",header.processor_id);
+						log_info("max_id: %d", local_index.message_id);
 		                in_charge = 0;
-		    		    for(unsigned int i = 0; i < header.num_rows; i++) {
-		    		        record_int_entry(local_index.id_index[i]);
-		    		    }
-
 					}
 				}
 
@@ -687,7 +725,6 @@ void count_function_start() {
 
 	//send the first MCPL package if initiate is TRUE
 	if(header.initiate_send == 1) {
-		//log_info("solution: %d", header.num_rows);
 		record_int_entry(header.num_rows);
 		send_state(header.num_rows, 1);
 	}
@@ -700,19 +737,16 @@ void count_function_receive(uint payload) {
 	if(header.initiate_send == 0){
 		payload = payload + header.num_rows;
 		send_state(payload, 1);
-		//log_info("solution: %d", payload);
 		record_int_entry(payload);
 	}
 
 }
 
 void leader_blast() {
-	//log_info("Commander in chief: %d", 1);
 	send_state(1, 2);
 }
 
 void report_to_leader(uint payload) {
-	//log_info("Command received: %d", payload);
 	record_int_entry(payload);
 	send_state(payload,2);
 }
@@ -762,6 +796,8 @@ void receive_data(uint key, uint payload) {
        //log_info("Could not add state");
    }
 
+   //log_info("--package arrived-- %d", payload);
+
    //depending on the function, select a way to handle the incoming message
    switch(header.function_id) {
 		case 1 :
@@ -774,8 +810,6 @@ void receive_data(uint key, uint payload) {
 			 if(header.initiate_send == 0){report_to_leader(payload);}
 			 else{leader_collects_reports(payload);}
 			 break;
-	    //default :
-	    	//log_info("No function selected");
 	}
 
 }
@@ -789,7 +823,7 @@ void retrieve_header_data() {
 
     uint chip = spin1_get_chip_id();
     uint core = spin1_get_core_id();
-    //log_info("Issuing 'Vertex' from chip %d, core %d", chip, core);
+    log_info("Issuing 'Vertex' from chip %d, core %d", chip, core);
 
     //access the partition of the SDRAM where input data is stored
     address_t address = data_specification_get_data_address();
@@ -812,6 +846,7 @@ void retrieve_header_data() {
 	global_max_id   = 0;
 	in_charge       = 0;
 	current_leader  = 0;
+	reports_collected = 0;
 
 	if(header.initiate_send == 1) {
 		current_leader = header.processor_id;
@@ -904,7 +939,7 @@ void update(uint ticks, uint b) {
     	retrieve_header_data();
     	start_processing();
     }
-    else if(time == 1000) {
+    else if(time == 10000) {
         iobuf_data();
     }
 
