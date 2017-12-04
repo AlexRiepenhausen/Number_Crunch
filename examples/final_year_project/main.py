@@ -144,7 +144,7 @@ def load_data_onto_vertices(data, number_of_chips, columns, num_string_cols, fun
 '''-----------------------------------------------------------------------------------------------------'''
         
 #read the csv data with help form the parser class
-getData = parser('../../resources/data.csv')
+getData = parser('../../resources/test.csv')
 raw_data = getData.read_data()
 
 logger = logging.getLogger(__name__)
@@ -165,7 +165,7 @@ total_number_of_cores = \
 #param5: function id
 load_data_onto_vertices(raw_data, 1, [0], 1, 2)
 
-front_end.run(10000)
+front_end.run(1000)
 
 placements = front_end.placements()
 buffer_manager = front_end.buffer_manager()
