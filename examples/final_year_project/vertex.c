@@ -11,10 +11,11 @@
 /* 0 Default information about cores
  * 1 Enables information about messages received and sent
  * 2 Debug info on the id distribution algorithm
+ * 3 Information regarding the construction of the linked list dictionary
  */
 
 /*! multicast routing keys to communicate with neighbours */
-unsigned int *key_values;
+uint *key_values;
 
 //! Variables representing state
 uint32_t my_state = 0;
@@ -69,31 +70,31 @@ typedef enum initial_state_region_elements {
 
 struct header_info {
 
-   unsigned int processor_id;
+   uint processor_id;
    /* The id of the processor */
 
-   unsigned int num_cols;
+   uint num_cols;
    /* number of columns
     * in the original csv file
     */
-   unsigned int num_rows;
+   uint num_rows;
    /* number of rows
     * in the original csv file
     */
-   unsigned int string_size;
+   uint string_size;
    /* number of bytes that
     * are allocated for each individual string
     */
-   unsigned int num_string_cols;
+   uint num_string_cols;
    /* Tells you the number of string columns
     * All string columns SHOULD be written to SDRAM first (from python) -
     * then and only then the integer columns
     */
-   unsigned int initiate_send;
+   uint initiate_send;
    /* if 1, vertex will be the first one to send out spike
     * if 0, vertex will wait until spike received
     */
-   unsigned int function_id;
+   uint function_id;
    /* holds id of function to be invoked
     * 0 - None
     * 1 - Count number of all data entries within the graph
@@ -110,33 +111,33 @@ struct header_info header;
 
 struct index_info {
 
-	unsigned int *id_index;
+	uint *id_index;
 	/* Holds the unique identifier for each data entry
 	 * Example: id_index[1] contains the unique id for the
 	 * second data entry within SDRAM
 	 * Currently this works only for one column
 	 * Length: header.num_rows
 	 */
-	unsigned int *message;
+	uint *message;
 	/* Holds 4 integers that make up a string
 	 * Designed to take a string entry that has been forwarded
 	 * by 4 distinct MCPL packages
 	 */
-	unsigned int  message_id;
+	uint  message_id;
 	/* Holds the unique id of string above
 	 * Takes the id from an incoming MCPL package as well
 	 */
-	unsigned int  messages_received;
+	uint  messages_received;
 	/* Keeps track of number of MCPL packages received
 	 * if messages_received mod 5 = 0, a string data entry and its
 	 * id have been received
 	 */
-    unsigned int  index_complete;
+    uint  index_complete;
 	/* A flag that tells if the index on this vertex is complete
 	 * Complete = 1; Incomplete = 0;
 	 * Complete means that there are no indices left with value 0
 	 */
-	unsigned int  max_id;
+	uint  max_id;
 	/* Tells you the highest id number on this vertex
 	 */
 
@@ -144,23 +145,24 @@ struct index_info {
 
 //declare linked list to be a dictionary
 typedef struct node {
-	unsigned int entry1;
-	unsigned int entry2;
-	unsigned int entry3;
-	unsigned int entry4;
-	unsigned int id;
+	uint *entry;
+	uint id;
+	uint frequency;
+	uint index_start;
+	uint index_end;
     struct node *next;
 } node_t;
 
 node_t * dictionary;
+node_t * end_of_dict;
 
 struct index_info local_index;
 
-unsigned int reported_ready;
-unsigned int forward_mode_on;
-unsigned int current_leader;
-unsigned int global_max_id;
-unsigned int in_charge;
+uint reported_ready;
+uint forward_mode_on;
+uint current_leader;
+uint global_max_id;
+uint in_charge;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // FUNCTION REFERENCES                                                                           //                                                                  //
@@ -169,20 +171,20 @@ unsigned int in_charge;
 void resume_callback();
 void iobuf_data();
 
-int search_dictionary(unsigned int *string_to_search);
-void add_item_to_dictionary(unsigned int *given_string, unsigned int id);
+node_t *search_dictionary(uint *string_to_search);
+void add_item_to_dictionary(uint *given_string, uint index, uint id);
 
-unsigned int compare_two_strings(unsigned int *string_1, unsigned int *string_2);
-unsigned int find_instance_of(unsigned int given_id, unsigned int offset);
-unsigned int identify_signal(unsigned int signal);
+uint compare_two_strings(uint *string_1, uint *string_2);
+uint find_instance_of(uint given_id);
+uint identify_signal(uint signal);
 
 void forward_string();
-void send_string(unsigned int data_entry_position);
-void send_signal(unsigned int id, unsigned int signal);
+void send_string(uint data_entry_position);
+void send_signal(uint id, uint signal);
 
 void start_processing();
 void initialise_index();
-void complete_index(unsigned int unique_id, unsigned int start_index);
+void complete_index(uint unique_id, uint start_index);
 void update_index_upon_message_received();
 void index_receive(uint payload);
 void index_message_reached_sender();
@@ -201,8 +203,8 @@ void send_state(uint payload, uint key);
 void receive_data(uint key, uint payload);
 
 void retrieve_header_data();
-void record_string_entry(unsigned int *int_arr);
-void record_int_entry(unsigned int solution);
+void record_string_entry(uint *int_arr);
+void record_int_entry(uint solution);
 
 void update(uint ticks, uint b);
 static bool initialise_recording();
@@ -227,54 +229,82 @@ void iobuf_data(){
     int* my_string = (int *) &data_address[0];
 }
 
-int search_dictionary(unsigned int *string_to_search) {
+node_t *search_dictionary(uint *string_to_search) {
 
 	node_t * item = dictionary;
 
-	while(item->id != -1) {
+	#if defined(DEBUG) && (DEBUG == 3)
+        log_info("---------SEARCH-----------");
+    	log_info("| search: %d",item->entry[0]);
+    	log_info("| search: %d",item->entry[1]);
+    	log_info("| search: %d",item->entry[2]);
+    	log_info("| search: %d",item->entry[3]);
+	#endif
 
-		unsigned int *entry = malloc(4*sizeof(int));
-        entry[0] = item->entry1;
-        entry[1] = item->entry2;
-        entry[2] = item->entry3;
-        entry[3] = item->entry4;
+	while(item->frequency != 0) {
 
-		if(compare_two_strings(string_to_search, entry) == 1){
-			return item->id;
+		#if defined(DEBUG) && (DEBUG == 3)
+		    log_info("|                         ");
+			log_info("| found: %d",item->entry[0]);
+			log_info("| found: %d",item->entry[1]);
+			log_info("| found: %d",item->entry[2]);
+			log_info("| found: %d",item->entry[3]);
+		#endif
+
+		if(compare_two_strings(string_to_search, item->entry) == 1) {
+			return item;
 		}
 
 		item = item->next;
 
 	}
 
-	return -1;
+    end_of_dict = item;
+
+	return item;
 
 }
 
-void add_item_to_dictionary(unsigned int *given_string, unsigned int id) {
+void add_item_to_dictionary(uint *given_string, uint index, uint id) {
 
-	node_t * item = dictionary;
+	node_t * item = end_of_dict;
 
-	while(item->id != -1) {item = item->next;}
+    uint *new_entry = malloc(4*sizeof(uint));
+    for(int i = 0; i < 4; i++){new_entry[i] = given_string[i];}
 
-	item->entry1 = given_string[0];
-	item->entry2 = given_string[1];
-	item->entry3 = given_string[2];
-	item->entry4 = given_string[3];
-	item->id     = id;
+    item->frequency   = 1;
+	item->entry       = new_entry;
+	item->id          = id;
+	item->index_start = index;
+	item->index_end   = index+1;
 
 	item->next = malloc(sizeof(node_t));
-	item->next->id = -1;
+	item->next->id          = -1;
+	item->next->frequency   = 0;
+	item->next->index_start = 0;
+	item->next->index_end   = 0;
+
+    end_of_dict = item->next;
+
+	#if defined(DEBUG) && (DEBUG == 3)
+		log_info("----------ADD------------");
+		log_info("| ENTRY: %d", item->entry[0]);
+		log_info("| FREQ : %d", item->frequency);
+		log_info("| START: %d", item->index_start);
+		log_info("| END  : %d", item->index_end);
+		log_info("| ID   : %d", item->id);
+	#endif
+
 
 }
 
-unsigned int compare_two_strings(unsigned int *string_1, unsigned int *string_2) {
+uint compare_two_strings(uint *string_1, uint *string_2) {
 
     //compares two strings with each other
 	//return 1
 	//return 0 if not
 
-    unsigned int i;
+    uint i;
     for(i = 0; i < header.string_size/4; i++){
       if(string_1[i] != string_2[i]){return 0;}
     }
@@ -283,66 +313,73 @@ unsigned int compare_two_strings(unsigned int *string_1, unsigned int *string_2)
 
 }
 
-unsigned int find_instance_of(unsigned int given_id, unsigned int offset) {
+uint find_instance_of(uint given_id) {
 
-	//finds the data item with the given id and returns its index(!),
-	//starting from a certain offset, so that iterating through all items with the
-	//same id is possible if required
+	uint compare = -1;
+	node_t * item = dictionary;
 
-	//offset is the index of the last element that has been found in the list
-	unsigned int i = offset;
-    for(i = 0; i < header.num_rows; i++) {
+	while(item->frequency != 0) {
+
+		if(item->id == given_id) {
+			compare = item->index_start;
+			break;
+		}
+
+		item = item->next;
+
+	}
+
+    log_info("CHECK_1: %d", compare);
+
+
+    for(uint i = 0; i < header.num_rows; i++) {
     	if(local_index.id_index[i] == given_id){
+    		log_info("CHECK_2: %d", i);
     		return i;
     	}
     }
-
+    log_info("CHECK_2: %d", -1);
     return -1;
 
 }
 
-void send_string(unsigned int data_entry_position) {
+void send_string(uint data_entry_position) {
 
 	//take every column of strings and assign an unique id to each string
     address_t address = data_specification_get_data_address();
     address_t data_address =
         data_specification_get_region(INPUT_DATA, address);
 
-	//make sure any non-integer entries do exist
-	if(header.num_string_cols != 0 && header.num_rows != 0) {
+	uint start = 7  + 4 * data_entry_position;
+	uint end   = 11 + 4 * data_entry_position;
+	uint count = 0;
 
-    	unsigned int start = 7  + 4 * data_entry_position;
-    	unsigned int end   = 11 + 4 * data_entry_position;
-    	unsigned int count = 0;
+	uint i;
+	uint entry[4];
 
-    	unsigned int i;
-    	unsigned int entry[4];
+	//current entry
+    for(i = start; i < end; i++) {
+    	entry[count] = *(&data_address[i]);
+    	count++;
+    }
 
-    	//current entry
-	    for(i = start; i < end; i++) {
-	    	entry[count] = *(&data_address[i]);
-	    	count++;
-	    }
+	//send the first data entry to the next core - 4 spikes
+	send_state(entry[0], 2);
+	send_state(entry[1], 2);
+	send_state(entry[2], 2);
+	send_state(entry[3], 2);
 
-		//send the first data entry to the next core - 4 spikes
-		send_state(entry[0], 2);
-		send_state(entry[1], 2);
-		send_state(entry[2], 2);
-		send_state(entry[3], 2);
+	//send the id of that entry
+	send_state(local_index.id_index[data_entry_position], 2);
 
-		//send the id of that entry
-		send_state(local_index.id_index[data_entry_position], 2);
-
-		#if defined(DEBUG) && (DEBUG >= 1)
-			log_info("SEND STRING");
-			log_info("M1: %d",entry[0]);
-			log_info("M2: %d",entry[1]);
-			log_info("M3: %d",entry[2]);
-			log_info("M4: %d",entry[3]);
-			log_info("M5: %d",local_index.id_index[data_entry_position]);
-		#endif
-
-	}
+	#if defined(DEBUG) && (DEBUG == 1)
+		log_info("SEND STRING");
+		log_info("M1: %d",entry[0]);
+		log_info("M2: %d",entry[1]);
+		log_info("M3: %d",entry[2]);
+		log_info("M4: %d",entry[3]);
+		log_info("M5: %d",local_index.id_index[data_entry_position]);
+	#endif
 
 }
 
@@ -354,7 +391,7 @@ void forward_string() {
 	send_state(local_index.message[3], 2);
 	send_state(local_index.message_id, 2);
 
-    #if defined(DEBUG) && (DEBUG >= 1)
+    #if defined(DEBUG) && (DEBUG == 1)
 		log_info("FORWARD");
 		log_info("M1: %d",local_index.message[0]);
 		log_info("M2: %d",local_index.message[1]);
@@ -365,9 +402,9 @@ void forward_string() {
 
 }
 
-unsigned int identify_signal(unsigned int signal) {
+uint identify_signal(uint signal) {
 
-	unsigned int i;
+	uint i;
 	for(i = 0; i < 3; i++) {
 		if(local_index.message[i] != signal) {
 			return 0;
@@ -378,7 +415,7 @@ unsigned int identify_signal(unsigned int signal) {
 
 }
 
-void send_signal(unsigned int id, unsigned int signal) {
+void send_signal(uint id, uint signal) {
 
 	//0 processing finished completely
 	//1 core ready for other tasks
@@ -390,7 +427,7 @@ void send_signal(unsigned int id, unsigned int signal) {
 	send_state(header.processor_id, 2);
 	send_state(id, 2);
 
-	#if defined(DEBUG) && (DEBUG >= 1)
+	#if defined(DEBUG) && (DEBUG == 1)
 		log_info("SIGNAL");
 		log_info("M1: %d",signal);
 		log_info("M2: %d",signal);
@@ -423,7 +460,7 @@ void start_processing() {
 			 //start if index is complete - this only happens with the leader vertex in the beginning
 			 if(local_index.index_complete == 1) {
 				 //record the index information
-				 for(unsigned int i = 0; i < header.num_rows; i++) {
+				 for(uint i = 0; i < header.num_rows; i++) {
 					 record_int_entry(local_index.id_index[i]);
 				 }
 				 global_max_id = 1;
@@ -445,77 +482,141 @@ void start_processing() {
 void initialise_index() {
 
 	//take every column of strings and assign an unique id to each string
-    local_index.id_index          = malloc(sizeof(unsigned int) * header.num_rows);
-    local_index.message           = malloc(sizeof(unsigned int) * 4);
+    local_index.id_index          = malloc(sizeof(uint) * header.num_rows);
+    local_index.message           = malloc(sizeof(uint) * 4);
     local_index.message_id        = 0;
     local_index.messages_received = 0;
     local_index.index_complete    = 0;
     local_index.max_id            = 0;
 
-    dictionary         = malloc(sizeof(node_t));
-    dictionary->id     = -1;
+    dictionary              = malloc(sizeof(node_t));
+    dictionary->id          = 0;
+    dictionary->frequency   = 0;
+    dictionary->index_start = 0;
+    dictionary->index_end   = 0;
+    end_of_dict             = dictionary;
 
-    unsigned int current_index = 1;
+    uint current_id = 1;
 
-	//make sure any non-integer entries do exist
-	if(header.num_string_cols != 0 && header.num_rows != 0) {
+    address_t address = data_specification_get_data_address();
+    address_t data_address =
+        data_specification_get_region(INPUT_DATA, address);
 
-		if(header.initiate_send == 1) {
+	uint i,j,start,end,count;
+	uint *current_entry;
 
-			//get the SDRAM address
-		    address_t address = data_specification_get_data_address();
-		    address_t data_address =
-		        data_specification_get_region(INPUT_DATA, address);
+	if(header.initiate_send == 1) {
 
-			//read the first single entry
-			unsigned int i;
-		    unsigned int j;
-		    unsigned int *current_entry;
-		    for(i = 0; i < header.num_rows; i++) {
+		//read the first single entry
+	    for(i = 0; i < header.num_rows; i++) {
 
-		    	unsigned int start = 7  + 4*i;
-		    	unsigned int end   = 11 + 4*i;
-		    	unsigned int count = 0;
+	    	start = 7  + 4*i;
+	    	end   = 11 + 4*i;
+	    	count = 0;
 
-		    	//current entry
-			    for(j = start; j < end; j++) {
-			    	current_entry[count] = *(&data_address[j]);
-			    	count++;
-			    }
+		    for(j = start; j < end; j++) {
+		    	current_entry[count] = *(&data_address[j]);
+		    	count++;
+		    }
 
-			    int result = search_dictionary(current_entry);
+		    node_t *element = search_dictionary(current_entry);
 
-			    //entry exists in dictionary
-			    if(result != -1) {
-			    	local_index.id_index[i] = result;
-			    }
+		    //entry exists in dictionary
+		    if(element->frequency != 0) {
+		    	local_index.id_index[i] = element->id;
+		    	element->frequency = (element->frequency) + 1;
+		    	element->index_end = i + 1;
 
-			    //entry does not exist in dictionary
-			    if(result == -1) {
-			    	local_index.id_index[i] = current_index;
-			    	add_item_to_dictionary(current_entry, current_index);
-			    	local_index.max_id = current_index;
-			    	current_index++;
-			    }
+			#if defined(DEBUG) && (DEBUG == 3)
+		    	log_info("|---------UPDATE------------");
+		    	log_info("| ENTRY: %d", element->entry[0]);
+		    	log_info("| FREQ : %d", element->frequency);
+		    	log_info("| START: %d", element->index_start);
+		    	log_info("| END  : %d", element->index_end);
+		    	log_info("| ID   : %d", element->id);
+			#endif
 
 		    }
 
-		    //all data entries have a non zero index assigned to them
-		    local_index.index_complete = 1;
+		    //entry does not exist in dictionary
+		    if(element->frequency == 0) {
+		    	local_index.id_index[i] = current_id;
+		    	add_item_to_dictionary(current_entry,i,current_id);
+		    	local_index.max_id = current_id;
+		    	current_id++;
+		    }
+
+	    }
+
+	    //all data entries have a non zero index assigned to them
+	    local_index.index_complete = 1;
+
+	}//if leader
+
+	if(header.initiate_send == 0) {
+
+		for(i = 0; i < header.num_rows; i++) {
+
+			local_index.id_index[i] = 0;
+
+	    	start = 7  + 4 * i;
+	    	end   = 11 + 4 * i;
+	    	count = 0;
+
+		    for(j = start; j < end; j++) {
+		    	current_entry[count] = *(&data_address[j]);
+		    	count++;
+		    }
+
+		    node_t *element = search_dictionary(current_entry);
+		    log_info("--ENTRY: %d", current_entry[0]);
+		    //entry exists in dictionary
+		    if(element->frequency != 0) {
+		    	element->frequency = (element->frequency) + 1;
+		    	element->index_end = i + 1;
+				#if defined(DEBUG) && (DEBUG == 3)
+		    		log_info("|---------UPDATE------------");
+		    		log_info("| ENTRY: %d", element->entry[0]);
+		    		log_info("| FREQ : %d", element->frequency);
+		    		log_info("| START: %d", element->index_start);
+		    		log_info("| END  : %d", element->index_end);
+		    		log_info("| ID   : %d", element->id);
+				#endif
+
+		    }
+
+		    //entry does not exist in dictionary
+		    if(element->frequency == 0) {
+		    	add_item_to_dictionary(current_entry,i,0);
+		    }
 
 		}
 
-		if(header.initiate_send == 0) {
-			for(unsigned int i = 0; i < header.num_rows; i++) {
-				local_index.id_index[i] = 0;
-			}
+	}//if not leader
+
+	#if defined(DEBUG) && (DEBUG == 3)
+
+		uint test[4];
+		test[0] = 1430986784;
+		test[1] = 538976288;
+		test[2] = 538976288;
+		test[3] = 538976288;
+		node_t *element = search_dictionary(test);
+
+		if(element->frequency > 0){
+			log_info("ENTRY: %d", element->entry[0]);
 		}
 
-	}
+		log_info("FREQ : %d", element->frequency);
+		log_info("START: %d", element->index_start);
+		log_info("END  : %d", element->index_end);
+		log_info("ID   : %d", element->id);
+
+	#endif
 
 }
 
-void complete_index(unsigned int unique_id, unsigned int start_index) {
+void complete_index(uint unique_id, uint start_index) {
 
 	//get the SDRAM address
     address_t address = data_specification_get_data_address();
@@ -523,16 +624,14 @@ void complete_index(unsigned int unique_id, unsigned int start_index) {
         data_specification_get_region(INPUT_DATA, address);
 
 	//read the first single entry
-	unsigned int i;
-    unsigned int j;
-
-    unsigned int current_entry[4];
+	uint i,j;
+    uint current_entry[4];
 
     for(i = start_index; i < header.num_rows; i++) {
 
-    	unsigned int start = 7  + 4*i;
-    	unsigned int end   = 11 + 4*i;
-    	unsigned int count = 0;
+    	uint start = 7  + 4*i;
+    	uint end   = 11 + 4*i;
+    	uint count = 0;
 
     	//current entry
 	    for(j = start; j < end; j++) {
@@ -543,12 +642,12 @@ void complete_index(unsigned int unique_id, unsigned int start_index) {
 	    //check if entry exists in the already assigned region
 	    //Since the number of entries on one core is always limited, this is fine
 
-        unsigned int k = 0;
-        unsigned int l = 0;
+        uint k = 0;
+        uint l = 0;
 
-        unsigned int assigned = 0;
+        uint assigned = 0;
 
-        unsigned int past_entry[4];
+        uint past_entry[4];
 
         //check if id has already been assigned
         if(local_index.id_index[i] == 0) {
@@ -556,9 +655,9 @@ void complete_index(unsigned int unique_id, unsigned int start_index) {
         	//if id is 0, check for identical previous entries
             for(k = 0; k < i; k++) {
 
-    	    	unsigned int start2 = 7  + 4*k;
-    	    	unsigned int end2   = 11 + 4*k;
-    	    	unsigned int count2 = 0;
+    	    	uint start2 = 7  + 4*k;
+    	    	uint end2   = 11 + 4*k;
+    	    	uint count2 = 0;
 
     	    	//past entry
     		    for(l = start2; l < end2; l++) {
@@ -599,48 +698,51 @@ void complete_index(unsigned int unique_id, unsigned int start_index) {
 
 void update_index_upon_message_received() {
 
-	//goes through the index and replaces all elements that match with the
-	//spike message with the id contained within the message
-    address_t address = data_specification_get_data_address();
-    address_t data_address =
-        data_specification_get_region(INPUT_DATA, address);
+	//max id
+	local_index.message_id;
+	local_index.message;
 
-	unsigned int i,j;
-    for(i = 0; i < header.num_rows; i++) {
+    node_t *element = search_dictionary(local_index.message);
 
-    	unsigned int start = 7  + 4 * i;
-    	unsigned int end   = 11 + 4 * i;
-    	unsigned int count = 0;
+    //check if element exists
+    if(element->id != -1) {
 
-    	unsigned int current_entry[4];
+    	//check if element has id 0 assigned to it
+        if(element->id == 0) {
 
-    	//current entry
-	    for(j = start; j < end; j++) {
-	    	current_entry[count] = *(&data_address[j]);
-	    	count++;
-	    }
+        	element->id = local_index.message_id;
 
-    	if(compare_two_strings(current_entry,local_index.message) == 1) {
+			if(local_index.max_id < local_index.message_id){
+    			local_index.max_id = local_index.message_id;
+			}
 
-    		if(local_index.id_index[i] == 0) {
+        	//get the SDRAM address
+            address_t address = data_specification_get_data_address();
+            address_t data_address =
+                data_specification_get_region(INPUT_DATA, address);
 
-    			//update the index if it is still 0
-        	    local_index.id_index[i] = local_index.message_id;
+        	uint *current_entry;
 
-        	    //make sure that local_index.max_id is updated as well
-    			if(local_index.max_id < local_index.message_id){
-        			local_index.max_id = local_index.message_id;
-    			}
+            for(uint i = element->index_start; i < element->index_end; i++) {
 
-    		}
-    		else {
-    			//nothing to update
-    			break;
-    		}
+            	uint start = 7  + 4*i;
+            	uint end   = 11 + 4*i;
+            	uint count = 0;
 
-    	}
+            	//current entry
+        	    for(uint j = start; j < end; j++) {
+        	    	current_entry[count] = *(&data_address[j]);
+        	    	count++;
+        	    }
 
-    }//for
+    		    if(compare_two_strings(element->entry,current_entry) == 1) {
+    		    	local_index.id_index[i] = element->id;
+    		    }
+
+            }
+
+        }
+    }
 
 }
 
@@ -649,7 +751,7 @@ void index_receive(uint payload) {
 	//Case 1: You are the leader and waiting for reports
 	if(header.processor_id % 16 == 0 && forward_mode_on == 0) {
 
-		unsigned int cores_to_report = 15;
+		uint cores_to_report = 15;
 		if(current_leader != header.processor_id) {
 			cores_to_report = 14;
 		}
@@ -670,7 +772,7 @@ void index_receive(uint payload) {
 
 				global_max_id++;
 				if(global_max_id <= local_index.max_id) {
-					send_string(find_instance_of(global_max_id,0));
+					send_string(find_instance_of(global_max_id));
 				}
 				else {
 	                send_signal(global_max_id,0);
@@ -694,7 +796,7 @@ void index_receive(uint payload) {
 
 			local_index.message[(local_index.messages_received % 5) - 1] = payload;
 
-            #if defined(DEBUG) && (DEBUG >= 2)
+            #if defined(DEBUG) && (DEBUG == 2)
 				log_info("RECEIVED: %d", payload);
 			#endif
 
@@ -708,7 +810,7 @@ void index_receive(uint payload) {
 
 			local_index.message_id = payload;
 
-			#if defined(DEBUG) && (DEBUG >= 2)
+			#if defined(DEBUG) && (DEBUG == 2)
 				log_info("RECEIVED: %d", payload);
 				log_info("------------------");
 			#endif
@@ -724,7 +826,7 @@ void index_receive(uint payload) {
 				if(current_leader <= 15) {
 					forward_string(); //-> next core becomes the leader
 
-				#if defined(DEBUG) && (DEBUG >= 2)
+				#if defined(DEBUG) && (DEBUG == 2)
 					log_info("max_id: %d", local_index.message_id);
 					log_info("leader: %d", local_index.message[3]);
 				#endif
@@ -746,7 +848,7 @@ void index_receive(uint payload) {
 		//collect up to 5 messages
 		if(local_index.messages_received % 5 != 0) {
 			local_index.message[(local_index.messages_received % 5) - 1] = payload;
-            #if defined(DEBUG) && (DEBUG >= 2)
+            #if defined(DEBUG) && (DEBUG == 2)
 				log_info("RECEIVED: %d", payload);
             #endif
 		}
@@ -754,7 +856,7 @@ void index_receive(uint payload) {
 
 			local_index.message_id = payload;
 
-			#if defined(DEBUG) && (DEBUG >= 2)
+			#if defined(DEBUG) && (DEBUG == 2)
 				log_info("RECEIVED: %d", payload);
 				log_info("------------------");
 			#endif
@@ -770,7 +872,7 @@ void index_receive(uint payload) {
 						in_charge = 1; //-> you are the new leader
 
 			     		//Make sure that the index is complete
-						int zeros_exist = find_instance_of(0,0); //find first occurence of 0 index
+						int zeros_exist = find_instance_of(0); //find first occurence of 0 index
 
 						//zeros exist
 						if(zeros_exist != -1) {
@@ -785,7 +887,7 @@ void index_receive(uint payload) {
 							send_signal(local_index.message_id,0);
 						}
 
-		    		    for(unsigned int i = 0; i < header.num_rows; i++) {
+		    		    for(uint i = 0; i < header.num_rows; i++) {
 		    		        record_int_entry(local_index.id_index[i]);
 		    		    }
 
@@ -808,14 +910,14 @@ void index_receive(uint payload) {
 
 				if(identify_signal(1) == 1) {
 
-					#if defined(DEBUG) && (DEBUG >= 2)
+					#if defined(DEBUG) && (DEBUG == 2)
 						log_info("SPARTA: %d", local_index.message_id);
 						log_info("received: %d", local_index.message_id);
 						log_info("max_id:   %d", local_index.max_id);
 					#endif
 
 					if(local_index.message_id <= local_index.max_id) {
-						send_string(find_instance_of(local_index.message_id,0));
+						send_string(find_instance_of(local_index.message_id));
 					}
 					else {
 		                send_signal(local_index.message_id,0);
@@ -867,8 +969,8 @@ void report_to_leader(uint payload) {
 	send_state(payload,2);
 }
 
-unsigned int report = 0;
-unsigned int reports_received = 0;
+uint report = 0;
+uint reports_received = 0;
 void leader_collects_reports(uint payload) {
 
 	reports_received++;
@@ -907,7 +1009,7 @@ void receive_data(uint key, uint payload) {
    //log_info("the key i've received is %d\n", key);
    //log_info("the payload i've received is %d\n", payload);
 
-	#if defined(DEBUG) && (DEBUG >= 1)
+	#if defined(DEBUG) && (DEBUG == 1)
     	log_info("--package arrived-- %d", payload);
 	#endif
 
@@ -975,13 +1077,13 @@ void retrieve_header_data() {
 
 }
 
-void record_string_entry(unsigned int *int_arr) {
+void record_string_entry(uint *int_arr) {
 
 	//convert the array of [size] integers to a 4*[size] char array
 	unsigned char buffer[header.string_size];
 
-	unsigned int i;
-	unsigned int size = header.string_size/4;
+	uint i;
+	uint size = header.string_size/4;
 
 	for(i = 0; i < size; i++) {
       buffer[size*i + 0] = (int_arr[i] >> 24) & 0xFF;
@@ -997,12 +1099,12 @@ void record_string_entry(unsigned int *int_arr) {
 
 }
 
-void record_int_entry(unsigned int solution) {
+void record_int_entry(uint solution) {
 
 	char result[10];
 	itoa(solution,result,10);
 
-    //unsigned integers take 10 chars if represented as char arrays
+    //uintegers take 10 chars if represented as char arrays
     bool recorded = recording_record(0, result, 10 * sizeof(unsigned char));
 
 }
@@ -1090,10 +1192,10 @@ static bool initialize(uint32_t *timer_period) {
 
     if (transmission_region_address[0] > 0) {
 
-    	unsigned int number_of_keys = transmission_region_address[0];
-    	key_values = malloc(sizeof(unsigned int) * number_of_keys);
+    	uint number_of_keys = transmission_region_address[0];
+    	key_values = malloc(sizeof(uint) * number_of_keys);
     	log_info("number keys", number_of_keys);
-    	for(unsigned int i = 0; i < number_of_keys; i++) {
+    	for(uint i = 0; i < number_of_keys; i++) {
         	key_values[i] = transmission_region_address[2*i + 1];
             log_info("my key is %d\n", key_values[i]);
     	}
