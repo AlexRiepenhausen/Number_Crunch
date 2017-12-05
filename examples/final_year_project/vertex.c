@@ -144,14 +144,15 @@ struct index_info {
 
 //declare linked list to be a dictionary
 typedef struct node {
-	unsigned int *string;
+	unsigned int entry1;
+	unsigned int entry2;
+	unsigned int entry3;
+	unsigned int entry4;
 	unsigned int id;
-	unsigned int frequency;
     struct node *next;
 } node_t;
 
 node_t * dictionary;
-node_t * dict_start;
 
 struct index_info local_index;
 
@@ -168,7 +169,7 @@ unsigned int in_charge;
 void resume_callback();
 void iobuf_data();
 
-int search_dictionary(unsigned int *given_string);
+int search_dictionary(unsigned int *string_to_search);
 void add_item_to_dictionary(unsigned int *given_string, unsigned int id);
 
 unsigned int compare_two_strings(unsigned int *string_1, unsigned int *string_2);
@@ -226,25 +227,19 @@ void iobuf_data(){
     int* my_string = (int *) &data_address[0];
 }
 
-int search_dictionary(unsigned int *given_string) {
+int search_dictionary(unsigned int *string_to_search) {
 
-	log_info("ITEM TO SEARCH:");
-	log_info("-item1: %d",given_string[0]);
-	log_info("-item1: %d",given_string[1]);
-	log_info("-item1: %d",given_string[2]);
-	log_info("-item1: %d",given_string[3]);
-	log_info("-----------------");
 	node_t * item = dictionary;
-    //iterate through dictionary
+
 	while(item->id != -1) {
 
-		log_info("-item2: %d",item->string[0]);
-		log_info("-item2: %d",item->string[1]);
-		log_info("-item2: %d",item->string[2]);
-		log_info("-item2: %d",item->string[3]);
+		unsigned int *entry = malloc(4*sizeof(int));
+        entry[0] = item->entry1;
+        entry[1] = item->entry2;
+        entry[2] = item->entry3;
+        entry[3] = item->entry4;
 
-		if(compare_two_strings(given_string,item->string) == 1){
-			log_info("-----------------");
+		if(compare_two_strings(string_to_search, entry) == 1){
 			return item->id;
 		}
 
@@ -252,8 +247,6 @@ int search_dictionary(unsigned int *given_string) {
 
 	}
 
-	//item not found
-	log_info("-----------------");
 	return -1;
 
 }
@@ -262,27 +255,16 @@ void add_item_to_dictionary(unsigned int *given_string, unsigned int id) {
 
 	node_t * item = dictionary;
 
-	log_info("item->id: %d", item->id);
+	while(item->id != -1) {item = item->next;}
 
-    //iterate through dictionary
-	while(item->id != -1) {
-		log_info("steps");
-		item = item->next;
-	}
-
-	item->string = given_string;
+	item->entry1 = given_string[0];
+	item->entry2 = given_string[1];
+	item->entry3 = given_string[2];
+	item->entry4 = given_string[3];
 	item->id     = id;
 
-	node_t *new = malloc(sizeof(node_t));
-	new->id = -1;
-	new->string = malloc(4 * sizeof(unsigned int));
-
-	item->next = new;
-
-	log_info("DICTIONARYID: %d", dictionary->next->id);
-	log_info("DICTIONARYID: %d", item->next->id);
-
-
+	item->next = malloc(sizeof(node_t));
+	item->next->id = -1;
 
 }
 
@@ -471,7 +453,6 @@ void initialise_index() {
     local_index.max_id            = 0;
 
     dictionary         = malloc(sizeof(node_t));
-    dictionary->string = malloc(4 * sizeof(unsigned int));
     dictionary->id     = -1;
 
     unsigned int current_index = 1;
@@ -489,7 +470,7 @@ void initialise_index() {
 			//read the first single entry
 			unsigned int i;
 		    unsigned int j;
-		    unsigned int *current_entry = malloc(4 * sizeof(unsigned int));
+		    unsigned int *current_entry;
 		    for(i = 0; i < header.num_rows; i++) {
 
 		    	unsigned int start = 7  + 4*i;
@@ -503,8 +484,6 @@ void initialise_index() {
 			    }
 
 			    int result = search_dictionary(current_entry);
-
-			    log_info("RESULT: %d",result);
 
 			    //entry exists in dictionary
 			    if(result != -1) {
@@ -525,14 +504,6 @@ void initialise_index() {
 		    local_index.index_complete = 1;
 
 		}
-
-		log_info("linkedlist:");
-		int *test = malloc(4 * sizeof(unsigned int));
-		test[0] = 0;
-		test[1] = 0;
-		test[2] = 0;
-		test[3] = 0;
-		int result = search_dictionary(test);
 
 		if(header.initiate_send == 0) {
 			for(unsigned int i = 0; i < header.num_rows; i++) {
