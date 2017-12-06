@@ -82,6 +82,39 @@ def write_unique_ids_to_csv(getData,number_of_chips,num_data_rows):
         
     getData.write_to_csv('../../resources/output.csv', id_array)
     
+def display_linked_list_size():
+    
+    for placement in sorted(placements.placements,
+        key=lambda p: (p.x, p.y, p.p)):
+
+        if isinstance(placement.vertex, Vertex):
+        
+            result = placement.vertex.read(placement, buffer_manager)
+            
+            temp1 = []
+            for x in range (0,10):
+                if result[x] != 0:        
+                    temp1.append(result[x])
+                else:
+                    break
+            
+            temp2 = []
+            for x in range (10,20):
+                if result[x] != 0:        
+                    temp2.append(result[x])
+                else:
+                    break
+                
+            rows   = int(''.join(chr(i) for i in temp1))
+            length = int(''.join(chr(i) for i in temp2))
+         
+            logger.info("|----------------|") 
+            logger.info("| Core {}, {}, {}".format(placement.x, placement.y, placement.p))   
+            logger.info("| Rows %d",rows)
+            logger.info("| List %d",length)
+            logger.info("| TCM Memory for rows: %d bytes", (rows * 2))
+            logger.info("| TCM Memory for list: %d bytes", (length * 40))
+            logger.info("| TCM Memory total   : %d bytes", (rows * 2 + length * 40))
 '''-----------------------------------------------------------------------------------------------------'''
 
 def load_data_onto_vertices(data, number_of_chips, columns, num_string_cols, function_id):
@@ -144,7 +177,7 @@ def load_data_onto_vertices(data, number_of_chips, columns, num_string_cols, fun
 '''-----------------------------------------------------------------------------------------------------'''
         
 #read the csv data with help form the parser class
-getData = parser('../../resources/test.csv')
+getData = parser('../../resources/date.csv')
 raw_data = getData.read_data()
 
 logger = logging.getLogger(__name__)
@@ -165,10 +198,11 @@ total_number_of_cores = \
 #param5: function id
 load_data_onto_vertices(raw_data, 1, [0], 1, 2)
 
-front_end.run(1000)
+front_end.run(10000)
 
 placements = front_end.placements()
 buffer_manager = front_end.buffer_manager()
 
-write_unique_ids_to_csv(getData,1,len(raw_data))
+#write_unique_ids_to_csv(getData,1,len(raw_data))
+display_linked_list_size()
 front_end.stop()
