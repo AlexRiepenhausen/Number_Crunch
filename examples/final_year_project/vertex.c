@@ -7,12 +7,12 @@
 #include <debug.h>
 
 /* Debugging mode */
-#define DEBUG_1 1
+#define DEBUG_1 0
 #define DEBUG_2 0
 #define DEBUG_3 0
 #define DEBUG_4 0
-#define DEBUG_START 6600
-#define DEBUG_END   6720
+#define DEBUG_START 0
+#define DEBUG_END   10000 //core 8 (number 6) sends 0-0-0-6-0
 /* 0 Default information about cores
  * DEBUG_1 Enables information about messages received and sent
  * DEBUG_2 Debug info on the id distribution algorithm
@@ -754,12 +754,6 @@ void complete_index(uint unique_id, uint start_index) {
 
     }
 
-    log_info("WHY?");
-	#if defined(RECORD_LINKED_LIST_LENGTHS) && (RECORD_LINKED_LIST_LENGTHS == 1)
-    	record_int_entry(header.num_rows);
-		record_int_entry(linked_list_length);
-	#endif
-
     local_index.index_complete = 1;
 
 }
@@ -896,6 +890,12 @@ void index_receive(uint payload) {
 
 				current_leader++;
 				if(current_leader <= 15) {
+					log_info("FORWARD");
+					log_info("M1: %d",local_index.message[0]);
+					log_info("M2: %d",local_index.message[1]);
+					log_info("M3: %d",local_index.message[2]);
+					log_info("M4: %d",local_index.message[3]);
+					log_info("M5: %d",local_index.message_id);
 					forward_string(); //-> next core becomes the leader
 
 				#if defined(DEBUG_2) && (DEBUG_2 == 1)
@@ -965,6 +965,12 @@ void index_receive(uint payload) {
 							send_signal(local_index.message_id,0);
 						}
 
+						//Recording information
+						#if defined(RECORD_LINKED_LIST_LENGTHS) && (RECORD_LINKED_LIST_LENGTHS == 1)
+							record_int_entry(header.num_rows);
+							record_int_entry(linked_list_length);
+						#endif
+
 						#if defined(RECORD_IDS) && (RECORD_IDS == 1)
 							for(uint i = 0; i < header.num_rows; i++) {
 								record_int_entry(local_index.id_index[i]);
@@ -981,6 +987,15 @@ void index_receive(uint payload) {
 					}
 
 					send_state(-1, 2); //report ready
+
+					#if defined(DEBUG_1) && (DEBUG_1 == 1)
+						if((time > DEBUG_START) && (time < DEBUG_END)) {
+							log_info("SEND ACKNOWLEDGEMENT: -1");
+							log_info("Index complete: %d", local_index.index_complete);
+							log_info("Core in charge: %d", in_charge);
+							log_info("Processor id: %d", header.processor_id);
+						}
+					#endif
 
 				}
 
@@ -1208,9 +1223,11 @@ void update(uint ticks, uint b) {
 
     time++;
 
-	if((time > DEBUG_START) && (time < DEBUG_END)) {
-		 log_info("on tick %d of %d", time, simulation_ticks);
-	}
+    if(DEBUG_1 == 1 || DEBUG_2 == 1 || DEBUG_3 == 1 || DEBUG_4 == 1){
+    	if((time > DEBUG_START) && (time < DEBUG_END)) {
+    		 log_info("on tick %d of %d", time, simulation_ticks);
+    	}
+    }
 
     // check that the run time hasn't already elapsed and thus needs to be killed
     if ((infinite_run != TRUE) && (time >= simulation_ticks)) {
