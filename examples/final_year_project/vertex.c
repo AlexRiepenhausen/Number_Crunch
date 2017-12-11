@@ -7,12 +7,12 @@
 #include <debug.h>
 
 /* Debugging mode */
-#define DEBUG_1 0
+#define DEBUG_1 1
 #define DEBUG_2 0
 #define DEBUG_3 0
 #define DEBUG_4 0
 #define DEBUG_START 0
-#define DEBUG_END   10000 //core 8 (number 6) sends 0-0-0-6-0
+#define DEBUG_END   1000
 /* 0 Default information about cores
  * DEBUG_1 Enables information about messages received and sent
  * DEBUG_2 Debug info on the id distribution algorithm
@@ -21,7 +21,8 @@
  */
 
 #define RECORD_IDS 0
-#define RECORD_LINKED_LIST_LENGTHS 1
+#define RECORD_LINKED_LIST_LENGTHS 0
+#define RECORD_UNIQUE_ITEMS 1
 /* 0 record unique ids
  * 1 record the length of the linked list
  */
@@ -114,6 +115,7 @@ struct header_info {
     * 0 - None
     * 1 - Count number of all data entries within the graph
     * 2 - Builds an index table in every core within the network
+    * 3 - Extracts number of unique entries from SDRAM
     */
 
 };
@@ -162,14 +164,16 @@ struct index_info {
 typedef struct node {
 	uint *entry;
 	char entry_size;
-	int16_t id;
-	int16_t frequency;
-	int16_t index_start;
-	int16_t index_end;
+	uint16_t id;
+	uint16_t frequency;
+	uint16_t global_frequency;
+	uint16_t index_start;
+	uint16_t index_end;
     struct node *next;
 } node_t;
 
 node_t * dictionary;
+node_t * current_item;
 node_t * end_of_dict;
 
 struct index_info local_index;
@@ -178,8 +182,11 @@ uint reported_ready;
 uint forward_mode_on;
 uint current_leader;
 uint global_max_id;
+uint current_id;
 uint in_charge;
 uint linked_list_length;
+
+uint sum;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // FUNCTION REFERENCES                                                                           //                                                                  //
@@ -198,6 +205,7 @@ uint identify_signal(uint signal);
 void forward_string();
 void send_string(uint data_entry_position);
 void send_signal(uint id, uint signal);
+void send_function_signal(uint signal, uint entry1, uint entry2);
 
 void start_processing();
 void initialise_index();
@@ -220,8 +228,9 @@ void send_state(uint payload, uint key);
 void receive_data(uint key, uint payload);
 
 void retrieve_header_data();
-void record_string_entry(uint *int_arr);
+void record_string_entry(uint *int_arr, uint size);
 void record_int_entry(uint solution);
+void record_unqiue_items(uint start, uint end);
 
 void update(uint ticks, uint b);
 static bool initialise_recording();
@@ -238,7 +247,7 @@ void resume_callback() {
     time = UINT32_MAX;
 }
 
-void iobuf_data(){
+void iobuf_data() {
     address_t address = data_specification_get_data_address();
     address_t data_address =
         data_specification_get_region(INPUT_DATA, address);
@@ -286,13 +295,30 @@ node_t *search_dictionary(uint *string_to_search) {
 
 }
 
+node_t *search_dictionary_with_id(uint id_to_search) {
+
+	node_t * item = dictionary;
+
+	while(item->frequency != 0) {
+		if(item->id == id_to_search) {
+			return item;
+		}
+		item = item->next;
+	}
+
+	end_of_dict = item;
+
+	return item;
+
+}
+
 void add_item_to_dictionary(uint *given_string, uint index, uint id) {
 
 	node_t * item = end_of_dict;
 
 	//538976288 stands for a 0 entry - if those occur don't store them
 	uint count = 0;
-	for(int i = 0; i < 4; i++){
+	for(uint i = 0; i < 4; i++){
 		if(given_string[i] == 538976288) {
 			break;
 		}
@@ -304,11 +330,12 @@ void add_item_to_dictionary(uint *given_string, uint index, uint id) {
     uint *new_entry = malloc(count*sizeof(uint));
     for(int i = 0; i < count; i++){new_entry[i] = given_string[i];}
 
-    item->frequency   = 1;
-	item->entry       = new_entry;
-	item->id          = id;
-	item->index_start = index;
-	item->index_end   = index+1;
+    item->frequency        = 1;
+    item->global_frequency = 1;
+	item->entry            = new_entry;
+	item->id               = id;
+	item->index_start      = index;
+	item->index_end        = index+1;
 
 	item->next = malloc(sizeof(node_t));
 	item->next->id          = -1;
@@ -506,6 +533,19 @@ void send_signal(uint id, uint signal) {
 
 }
 
+void send_function_signal(uint signal, uint entry1, uint entry2) {
+
+	//signal 0 - leader sends an update
+	//signal 1 - leader sends a query
+
+	send_state(signal, 2);
+	send_state(signal, 2);
+	send_state(signal, 2);
+	send_state(entry1, 2);
+	send_state(entry2, 2);
+
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // MAIN COMPONENTS OF QUERY PROCESSING ALGORITHMS                                                //
 // START_PROCESSING                                                                              //
@@ -543,8 +583,6 @@ void start_processing() {
 
 		case 3 :
 
-			 //if you are the leader
-			 if(header.initiate_send == 1) {leader_blast();}
 		     break;
 
 	}
@@ -561,13 +599,14 @@ void initialise_index() {
     local_index.index_complete    = 0;
     local_index.max_id            = 0;
 
-    dictionary              = malloc(sizeof(node_t));
-    dictionary->id          = 0;
-    dictionary->frequency   = 0;
-    dictionary->index_start = 0;
-    dictionary->index_end   = 0;
-    dictionary->entry_size  = 0;
-    end_of_dict             = dictionary;
+    dictionary                    = malloc(sizeof(node_t));
+    dictionary->id                = 0;
+    dictionary->frequency         = 0;
+    dictionary->global_frequency  = 0;
+    dictionary->index_start       = 0;
+    dictionary->index_end         = 0;
+    dictionary->entry_size        = 0;
+    end_of_dict                   = dictionary;
 
 	linked_list_length = 0;
 
@@ -600,6 +639,7 @@ void initialise_index() {
 		    if(element->frequency != 0) {
 		    	local_index.id_index[i] = element->id;
 		    	element->frequency = (element->frequency) + 1;
+		    	element->global_frequency = element->frequency;
 		    	element->index_end = i + 1;
 
 			#if defined(DEBUG_3) && (DEBUG_3 == 1)
@@ -760,10 +800,6 @@ void complete_index(uint unique_id, uint start_index) {
 
 void update_index_upon_message_received() {
 
-	//max id
-	local_index.message_id;
-	local_index.message;
-
     node_t *element = search_dictionary(local_index.message);
 
     //check if element exists
@@ -890,12 +926,7 @@ void index_receive(uint payload) {
 
 				current_leader++;
 				if(current_leader <= 15) {
-					log_info("FORWARD");
-					log_info("M1: %d",local_index.message[0]);
-					log_info("M2: %d",local_index.message[1]);
-					log_info("M3: %d",local_index.message[2]);
-					log_info("M4: %d",local_index.message[3]);
-					log_info("M5: %d",local_index.message_id);
+
 					forward_string(); //-> next core becomes the leader
 
 				#if defined(DEBUG_2) && (DEBUG_2 == 1)
@@ -906,7 +937,18 @@ void index_receive(uint payload) {
 				#endif
 
 					forward_mode_on = 1;
+
 				}
+
+				//kickstart retrieving unique id's result -> counting
+			    #if defined(RECORD_UNIQUE_ITEMS) && (RECORD_UNIQUE_ITEMS == 1)
+					//start new function if required
+					if(current_leader == header.processor_id + 16){
+						log_info("END OF ID ASSIGNMENT PROCESS");
+						header.function_id = 3;
+						start_histogram_function();
+					}
+				#endif
 
 			}
 
@@ -938,6 +980,11 @@ void index_receive(uint payload) {
 		 		   log_info("------------------");
 		 	   }
 			#endif
+
+			if(identify_signal(3) == 1) {
+				header.function_id = local_index.message_id;
+				send_state(-1,2);
+			}
 
 			if(in_charge == 0) {
 
@@ -1019,6 +1066,7 @@ void index_receive(uint payload) {
 					else {
 		                in_charge = 0;
 		                send_signal(local_index.message_id,0);
+
 						#if defined(DEBUG_2) && (DEBUG_2 == 1)
 		                	if((time > DEBUG_START) && (time < DEBUG_END)) {
 		                		log_info("OLD LEADER: %d",header.processor_id);
@@ -1037,10 +1085,144 @@ void index_receive(uint payload) {
 
 }
 
-void count_function_start() {
+void start_histogram_function() {
 
-	//counts all data entries within the graph
-	//the current implementation relies upon a ring structure
+	local_index.messages_received = 0;
+	forward_mode_on               = 0;
+	in_charge                     = 1;
+	sum                           = 0;
+	current_id                    = 1;
+	current_leader                = header.processor_id;
+
+	current_item = dictionary;
+
+	//-> tell subordinates to invoke function 3
+	send_function_signal(3,0,3);
+
+}
+
+void histogram_receive(uint payload) {
+
+	//Case 1: You are the leader and waiting for reports
+	if(header.processor_id % 16 == 0 && forward_mode_on == 0) {
+
+		if(payload == -1){reported_ready++;}
+		if(reported_ready == 15) {
+
+			reported_ready = 0;
+
+			if(current_id > global_max_id) {
+
+				record_unqiue_items(1,local_index.max_id);
+				current_leader++;
+
+				send_function_signal(2, current_leader, local_index.max_id+1);
+				forward_mode_on = 1;
+				return;
+			}
+
+			if(in_charge == 1) {
+
+				if(current_item->frequency != 0) {
+					send_function_signal(0,current_item->frequency, current_id);
+					current_item  = current_item->next;
+				}
+				else {
+					forward_mode_on = 1;
+					in_charge       = 0;
+					send_function_signal(1, 0, current_id);
+				}
+
+			}
+
+			if(in_charge == 0) {
+				forward_mode_on = 1;
+				send_function_signal(1, 0, current_id);
+			}
+
+			current_id++;
+
+		}
+
+	}
+
+	//Case 2: You are the leader and collecting information
+	if(header.processor_id % 16 == 0 && forward_mode_on == 1) {
+
+		if(current_id > global_max_id) {
+
+			current_leader++;
+			send_function_signal(2, current_leader, payload);
+			return;
+		}
+
+		reported_ready++;
+
+		sum = sum + payload;
+
+		if(reported_ready == 15) {
+			reported_ready = 0;
+			forward_mode_on = 0;
+			send_function_signal(0, sum, current_id);
+			sum = 0;
+		}
+
+	}
+
+	//Case 3: You are one of the subordinates
+	if(header.processor_id % 16 != 0) {
+
+		local_index.messages_received++;
+
+		//collect up to 5 messages
+		if(local_index.messages_received % 5 != 0) {
+			local_index.message[(local_index.messages_received % 5) - 1] = payload;
+		}
+		else {
+			local_index.message_id = payload;
+
+			//UPDATE
+			if(identify_signal(0) == 1) {
+
+				node_t *found = search_dictionary_with_id(local_index.message_id);
+
+				if(found->frequency != 0) {
+					found->global_frequency = local_index.message[3];
+				}
+
+				send_state(-1, 2);
+			}
+
+			//QUERY
+			if(identify_signal(1) == 1) {
+
+				node_t *found = search_dictionary_with_id(local_index.message_id);
+
+				if(found->frequency != 0) {
+					send_state(found->frequency, 2);
+				}
+
+			}
+
+			//RECORD
+			if(identify_signal(1) == 2){
+
+				uint the_leader = local_index.message[3];
+				if(the_leader == header.processor_id) {
+					uint start_id  = local_index.message_id;
+					record_unqiue_items(start_id,local_index.max_id);
+					send_state(local_index.max_id,2);
+				}
+
+			}
+
+		}
+
+	}
+
+}
+
+void count_function_start() {
 
 	//send the first MCPL package if initiate is TRUE
 	if(header.initiate_send == 1) {
@@ -1057,29 +1239,6 @@ void count_function_receive(uint payload) {
 		payload = payload + header.num_rows;
 		send_state(payload, 1);
 		record_int_entry(payload);
-	}
-
-}
-
-void leader_blast() {
-	send_state(1, 2);
-}
-
-void report_to_leader(uint payload) {
-	record_int_entry(payload);
-	send_state(payload,2);
-}
-
-uint report = 0;
-uint reports_received = 0;
-void leader_collects_reports(uint payload) {
-
-	reports_received++;
-	if(reports_received < 15) {
-	    report = report + payload;
-	}
-	else {
-		record_int_entry(report + payload);
 	}
 
 }
@@ -1125,8 +1284,7 @@ void receive_data(uint key, uint payload) {
 			 index_receive(payload);
 	         break;
 		case 3 :
-			 if(header.initiate_send == 0){report_to_leader(payload);}
-			 else{leader_collects_reports(payload);}
+			 histogram_receive(payload);
 			 break;
 	}
 
@@ -1180,13 +1338,41 @@ void retrieve_header_data() {
 
 }
 
-void record_string_entry(uint *int_arr) {
+void record_unqiue_items(uint start, uint end) {
+
+	log_info("ELVIS");
+	node_t *item = dictionary;
+
+	while(item->frequency != 0) {
+
+		if(item->id < start) {
+			item = item->next;
+		}
+
+		if(item->id >= start) {
+
+			if(item->id <= end){
+				//record_string_entry(item->entry,item->entry_size);
+				record_int_entry(item->global_frequency);
+			}
+
+			if(item->id > end){
+				return;
+			}
+
+		}
+
+
+	}
+
+}
+
+void record_string_entry(uint *int_arr, uint size) {
 
 	//convert the array of [size] integers to a 4*[size] char array
 	unsigned char buffer[header.string_size];
 
 	uint i;
-	uint size = header.string_size/4;
 
 	for(i = 0; i < size; i++) {
       buffer[size*i + 0] = (int_arr[i] >> 24) & 0xFF;

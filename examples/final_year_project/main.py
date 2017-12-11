@@ -177,7 +177,7 @@ def load_data_onto_vertices(data, number_of_chips, columns, num_string_cols, fun
 '''-----------------------------------------------------------------------------------------------------'''
         
 #read the csv data with help form the parser class
-getData = parser('../../resources/date.csv')
+getData = parser('../../resources/test.csv')
 raw_data = getData.read_data()
 
 logger = logging.getLogger(__name__)
@@ -204,5 +204,6 @@ placements = front_end.placements()
 buffer_manager = front_end.buffer_manager()
 
 #write_unique_ids_to_csv(getData,1,len(raw_data))
-display_linked_list_size()
+#display_linked_list_size()
+display_results_function_one()
 front_end.stop()
