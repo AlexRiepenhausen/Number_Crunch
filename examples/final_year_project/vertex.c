@@ -12,7 +12,7 @@
 #define DEBUG_3 0
 #define DEBUG_4 0
 #define DEBUG_START 0
-#define DEBUG_END   1000
+#define DEBUG_END   500
 /* 0 Default information about cores
  * DEBUG_1 Enables information about messages received and sent
  * DEBUG_2 Debug info on the id distribution algorithm
@@ -543,6 +543,17 @@ void send_function_signal(uint signal, uint entry1, uint entry2) {
 	send_state(signal, 2);
 	send_state(entry1, 2);
 	send_state(entry2, 2);
+
+	#if defined(DEBUG_1) && (DEBUG_1 == 1)
+		if((time > DEBUG_START) && (time < DEBUG_END)) {
+			log_info("FUNCTION_SIGNAL");
+			log_info("M1: %d",signal);
+			log_info("M2: %d",signal);
+			log_info("M3: %d",signal);
+			log_info("M4: %d",entry1);
+			log_info("M5: %d",entry2);
+		}
+	#endif
 
 }
 
@@ -1121,11 +1132,17 @@ void histogram_receive(uint payload) {
 				return;
 			}
 
+			if(in_charge == 0) {
+				forward_mode_on = 1;
+				send_function_signal(1, 0, current_id);
+			}
+
 			if(in_charge == 1) {
 
 				if(current_item->frequency != 0) {
 					send_function_signal(0,current_item->frequency, current_id);
 					current_item  = current_item->next;
+					current_id++;
 				}
 				else {
 					forward_mode_on = 1;
@@ -1134,13 +1151,6 @@ void histogram_receive(uint payload) {
 				}
 
 			}
-
-			if(in_charge == 0) {
-				forward_mode_on = 1;
-				send_function_signal(1, 0, current_id);
-			}
-
-			current_id++;
 
 		}
 
@@ -1164,6 +1174,7 @@ void histogram_receive(uint payload) {
 			reported_ready = 0;
 			forward_mode_on = 0;
 			send_function_signal(0, sum, current_id);
+			current_id++;
 			sum = 0;
 		}
 
@@ -1191,27 +1202,44 @@ void histogram_receive(uint payload) {
 				}
 
 				send_state(-1, 2);
+
+				#if defined(DEBUG_1) && (DEBUG_1 == 1)
+					if((time > DEBUG_START) && (time < DEBUG_END)) {
+						log_info("SEND ACKNOWLEDGEMENT: -1");
+					}
+				#endif
+
 			}
 
 			//QUERY
 			if(identify_signal(1) == 1) {
 
 				node_t *found = search_dictionary_with_id(local_index.message_id);
+				send_state(found->frequency, 2);
 
-				if(found->frequency != 0) {
-					send_state(found->frequency, 2);
-				}
+				#if defined(DEBUG_1) && (DEBUG_1 == 1)
+					if((time > DEBUG_START) && (time < DEBUG_END)) {
+						log_info("SEND FREQUENCY: %d", found->frequency);
+					}
+				#endif
 
 			}
 
 			//RECORD
-			if(identify_signal(1) == 2){
+			if(identify_signal(2) == 1){
 
 				uint the_leader = local_index.message[3];
 				if(the_leader == header.processor_id) {
 					uint start_id  = local_index.message_id;
 					record_unqiue_items(start_id,local_index.max_id);
 					send_state(local_index.max_id,2);
+
+				#if defined(DEBUG_1) && (DEBUG_1 == 1)
+					if((time > DEBUG_START) && (time < DEBUG_END)) {
+						log_info("SEND RECORDED: %d", local_index.max_id);
+					}
+				#endif
+
 				}
 
 			}
@@ -1351,17 +1379,19 @@ void record_unqiue_items(uint start, uint end) {
 
 		if(item->id >= start) {
 
-			if(item->id <= end){
+			if(item->id <= end) {
 				//record_string_entry(item->entry,item->entry_size);
 				record_int_entry(item->global_frequency);
+				log_info("STRING   : %d",item->entry[0]);
+				log_info("FREQUENCY: %d",item->global_frequency);
+				item = item->next;
 			}
 
-			if(item->id > end){
+			if(item->id > end) {
 				return;
 			}
 
 		}
-
 
 	}
 
