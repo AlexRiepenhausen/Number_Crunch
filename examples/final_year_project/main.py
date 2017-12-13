@@ -51,6 +51,46 @@ def display_results_function_two():
             start = 0  + 16*x;
             end   = 15 + 16*x;
             logger.info("| {}| {}".format(result[start:end],result[start+64:end+64]))
+            
+def display_results_function_three():
+    
+    total = 0  
+    
+    logger.info("|------------------|----------|")
+    
+    for placement in sorted(placements.placements,
+        key=lambda p: (p.x, p.y, p.p)):
+
+        if isinstance(placement.vertex, Vertex):
+
+            result = placement.vertex.read(placement, buffer_manager)
+                                
+            number_of_entries = len(result)/26
+                   
+            for entry in range(0,number_of_entries):   
+                            
+                string_start = 26*entry +  0;    
+                string_end   = 26*entry + 16;
+                int_start    = 26*entry + 16;
+                int_end      = 26*entry + 26;   
+                
+                temp1 = []
+                for x in range (int_start,int_end):
+                    if result[x] != 0:        
+                        temp1.append(result[x])
+                    else:
+                        break                         
+
+                total = total + int(''.join(chr(i) for i in temp1))
+
+                logger.info("| {} | {}".format(result[string_start:string_end], \
+                                               result[int_start:int_end]))
+                
+            logger.info("                               ")
+         
+    logger.info("|------------------|----------|")
+    logger.info("| Total            | %d",  total)
+    logger.info("|------------------|----------|")
                             
 def write_unique_ids_to_csv(getData,number_of_chips,num_data_rows):
     
@@ -205,6 +245,7 @@ buffer_manager = front_end.buffer_manager()
 
 #write_unique_ids_to_csv(getData,1,len(raw_data))
 #display_linked_list_size()
-display_results_function_one()
+#display_results_function_one()
 #display_results_function_two()
+display_results_function_three()
 front_end.stop()

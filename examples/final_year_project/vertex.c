@@ -1127,12 +1127,13 @@ void leader_next_step() {
     time_out_block_start = 0;
     time_out_block_end   = 0;
 
+    //all info synchronised - tell everyone to record
 	if(current_id > global_max_id) {
 
 		record_unqiue_items(1,local_index.max_id);
 		current_leader++;
 
-		send_function_signal(2, current_leader, local_index.max_id+1);
+		send_function_signal(2, current_leader, local_index.max_id + 1);
 		forward_mode_on = 1;
 		return;
 	}
@@ -1186,8 +1187,7 @@ void histogram_receive(uint payload) {
 
 		reported_ready++;
 
-		sum = sum + payload;
-
+		if(payload != -1){sum = sum + payload;}
 		if(reported_ready == 15) {
 			reported_ready = 0;
 			forward_mode_on = 0;
@@ -1420,30 +1420,27 @@ void record_string_entry(uint *int_arr, uint size) {
 	//convert the array of [size] integers to a 4*[size] char array
 	unsigned char buffer[header.string_size];
 
+	uint num_ints = header.string_size/4;
+
 	uint i = 0;
 	for(i = 0; i < size; i++) {
-      buffer[header.string_size*i + 0] = (int_arr[i] >> 24) & 0xFF;
-	  buffer[header.string_size*i + 1] = (int_arr[i] >> 16) & 0xFF;
-	  buffer[header.string_size*i + 2] = (int_arr[i] >> 8) & 0xFF;
-	  buffer[header.string_size*i + 3] =  int_arr[i] & 0xFF;
+	  log_info("Recording1: %d",int_arr[i]);
+      buffer[num_ints*i + 0] = (int_arr[i] >> 24) & 0xFF;
+	  buffer[num_ints*i + 1] = (int_arr[i] >> 16) & 0xFF;
+	  buffer[num_ints*i + 2] = (int_arr[i] >> 8) & 0xFF;
+	  buffer[num_ints*i + 3] =  int_arr[i] & 0xFF;
 	}
+
 
 	if(size < header.string_size/4) {
 
 		uint remain = (header.string_size/4) - size;
-		uint rest_arr[remain];
-		uint count = 0;
-
-		for(uint j = 0; j < remain; j++) {
-			rest_arr[j] = 538976288;
-		}
 
 		for(uint k = i; k < header.string_size/4; k++) {
-			buffer[header.string_size*k + 0] = (rest_arr[count] >> 24) & 0xFF;
-			buffer[header.string_size*k + 1] = (rest_arr[count] >> 16) & 0xFF;
-			buffer[header.string_size*k + 2] = (rest_arr[count] >> 8) & 0xFF;
-			buffer[header.string_size*k + 3] =  rest_arr[count] & 0xFF;
-			count++;
+			buffer[num_ints*k + 0] = 32;
+			buffer[num_ints*k + 1] = 32;
+			buffer[num_ints*k + 2] = 32;
+			buffer[num_ints*k + 3] = 32;
 		}
 
 	}
@@ -1500,8 +1497,6 @@ void update(uint ticks, uint b) {
     	}
     }
 
-
-
     // check that the run time hasn't already elapsed and thus needs to be killed
     if ((infinite_run != TRUE) && (time >= simulation_ticks)) {
         //log_info("Simulation complete.\n");
@@ -1531,6 +1526,7 @@ void update(uint ticks, uint b) {
         //log_info("doing timer tick update\n");
         recording_do_timestep_update(time);
     }
+
 }
 
 static bool initialise_recording(){
