@@ -178,6 +178,9 @@ node_t * end_of_dict;
 
 struct index_info local_index;
 
+//timeout handler
+uint time_out_block_start;
+uint time_out_block_end;
 uint reported_ready;
 uint forward_mode_on;
 uint current_leader;
@@ -213,6 +216,8 @@ void complete_index(uint unique_id, uint start_index);
 void update_index_upon_message_received();
 void index_receive(uint payload);
 void index_message_reached_sender();
+
+void leader_next_step();
 
 void count_function_start();
 void count_function_receive(uint payload);
@@ -1098,6 +1103,9 @@ void index_receive(uint payload) {
 
 void start_histogram_function() {
 
+    time_out_block_start          = 0;
+    time_out_block_end            = 0;
+
 	local_index.messages_received = 0;
 	forward_mode_on               = 0;
 	in_charge                     = 1;
@@ -1112,47 +1120,57 @@ void start_histogram_function() {
 
 }
 
+void leader_next_step() {
+
+	reported_ready = 0;
+
+    time_out_block_start = 0;
+    time_out_block_end   = 0;
+
+	if(current_id > global_max_id) {
+
+		record_unqiue_items(1,local_index.max_id);
+		current_leader++;
+
+		send_function_signal(2, current_leader, local_index.max_id+1);
+		forward_mode_on = 1;
+		return;
+	}
+
+	if(in_charge == 0) {
+		forward_mode_on = 1;
+		send_function_signal(1, 0, current_id);
+	}
+
+	if(in_charge == 1) {
+
+		if(current_item->frequency != 0) {
+			send_function_signal(0,current_item->frequency, current_id);
+			current_item  = current_item->next;
+			current_id++;
+		}
+		else {
+			forward_mode_on = 1;
+			in_charge       = 0;
+			send_function_signal(1, 0, current_id);
+		}
+
+	}
+
+}
+
 void histogram_receive(uint payload) {
 
 	//Case 1: You are the leader and waiting for reports
 	if(header.processor_id % 16 == 0 && forward_mode_on == 0) {
 
+		//timeout handler
+		if(reported_ready == 0){time_out_block_start = time;}
+		if(reported_ready > 12){time_out_block_end   = time;}
+
+		//leader performing next step
 		if(payload == -1){reported_ready++;}
-		if(reported_ready == 15) {
-
-			reported_ready = 0;
-
-			if(current_id > global_max_id) {
-
-				record_unqiue_items(1,local_index.max_id);
-				current_leader++;
-
-				send_function_signal(2, current_leader, local_index.max_id+1);
-				forward_mode_on = 1;
-				return;
-			}
-
-			if(in_charge == 0) {
-				forward_mode_on = 1;
-				send_function_signal(1, 0, current_id);
-			}
-
-			if(in_charge == 1) {
-
-				if(current_item->frequency != 0) {
-					send_function_signal(0,current_item->frequency, current_id);
-					current_item  = current_item->next;
-					current_id++;
-				}
-				else {
-					forward_mode_on = 1;
-					in_charge       = 0;
-					send_function_signal(1, 0, current_id);
-				}
-
-			}
-
-		}
+		if(reported_ready == 15) {leader_next_step();}
 
 	}
 
@@ -1380,7 +1398,7 @@ void record_unqiue_items(uint start, uint end) {
 		if(item->id >= start) {
 
 			if(item->id <= end) {
-				//record_string_entry(item->entry,item->entry_size);
+				record_string_entry(item->entry,item->entry_size);
 				record_int_entry(item->global_frequency);
 				log_info("STRING   : %d",item->entry[0]);
 				log_info("FREQUENCY: %d",item->global_frequency);
@@ -1402,13 +1420,32 @@ void record_string_entry(uint *int_arr, uint size) {
 	//convert the array of [size] integers to a 4*[size] char array
 	unsigned char buffer[header.string_size];
 
-	uint i;
-
+	uint i = 0;
 	for(i = 0; i < size; i++) {
-      buffer[size*i + 0] = (int_arr[i] >> 24) & 0xFF;
-	  buffer[size*i + 1] = (int_arr[i] >> 16) & 0xFF;
-	  buffer[size*i + 2] = (int_arr[i] >> 8) & 0xFF;
-	  buffer[size*i + 3] =  int_arr[i] & 0xFF;
+      buffer[header.string_size*i + 0] = (int_arr[i] >> 24) & 0xFF;
+	  buffer[header.string_size*i + 1] = (int_arr[i] >> 16) & 0xFF;
+	  buffer[header.string_size*i + 2] = (int_arr[i] >> 8) & 0xFF;
+	  buffer[header.string_size*i + 3] =  int_arr[i] & 0xFF;
+	}
+
+	if(size < header.string_size/4) {
+
+		uint remain = (header.string_size/4) - size;
+		uint rest_arr[remain];
+		uint count = 0;
+
+		for(uint j = 0; j < remain; j++) {
+			rest_arr[j] = 538976288;
+		}
+
+		for(uint k = i; k < header.string_size/4; k++) {
+			buffer[header.string_size*k + 0] = (rest_arr[count] >> 24) & 0xFF;
+			buffer[header.string_size*k + 1] = (rest_arr[count] >> 16) & 0xFF;
+			buffer[header.string_size*k + 2] = (rest_arr[count] >> 8) & 0xFF;
+			buffer[header.string_size*k + 3] =  rest_arr[count] & 0xFF;
+			count++;
+		}
+
 	}
 
     //log_info("String Entry : %s", buffer);
@@ -1444,6 +1481,26 @@ void update(uint ticks, uint b) {
     		 log_info("on tick %d of %d", time, simulation_ticks);
     	}
     }
+
+    if(header.function_id == 3) {
+    	if(time_out_block_start != 0 && time_out_block_end != 0) {
+
+    		log_info("timeout");
+    		uint time_taken  = time_out_block_end - time_out_block_start;
+    		uint time_passed = time - time_out_block_end;
+
+    		if(time_taken == 0){
+    			if(time_passed == 5){leader_next_step();}
+    		}
+
+    		if(time_taken != 0){
+    			if(time_passed == time_taken * 5){leader_next_step();}
+    		}
+
+    	}
+    }
+
+
 
     // check that the run time hasn't already elapsed and thus needs to be killed
     if ((infinite_run != TRUE) && (time >= simulation_ticks)) {
