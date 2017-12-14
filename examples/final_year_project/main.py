@@ -56,6 +56,9 @@ def display_results_function_three():
     
     total = 0  
     
+    entry_array = []
+    id_array    = []
+    
     logger.info("|------------------|----------|")
     
     for placement in sorted(placements.placements,
@@ -86,11 +89,16 @@ def display_results_function_three():
                 logger.info("| {} | {}".format(result[string_start:string_end], \
                                                result[int_start:int_end]))
                 
-            logger.info("                               ")
+                entry_array.append(''.join(chr(i) for i in result[string_start:string_end]))
+                id_array.append(''.join(chr(i) for i in result[int_start:int_end]))
+                
          
     logger.info("|------------------|----------|")
     logger.info("| Total            | %d",  total)
     logger.info("|------------------|----------|")
+    
+    getData.write_to_csv('../../resources/output_id.csv', id_array)
+    getData.write_to_csv('../../resources/output_entry.csv', entry_array)
                             
 def write_unique_ids_to_csv(getData,number_of_chips,num_data_rows):
     
@@ -217,7 +225,7 @@ def load_data_onto_vertices(data, number_of_chips, columns, num_string_cols, fun
 '''-----------------------------------------------------------------------------------------------------'''
         
 #read the csv data with help form the parser class
-getData = parser('../../resources/test.csv')
+getData = parser('../../resources/date.csv')
 raw_data = getData.read_data()
 
 logger = logging.getLogger(__name__)

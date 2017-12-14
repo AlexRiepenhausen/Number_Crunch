@@ -7,12 +7,12 @@
 #include <debug.h>
 
 /* Debugging mode */
-#define DEBUG_1 1
+#define DEBUG_1 0
 #define DEBUG_2 0
 #define DEBUG_3 0
 #define DEBUG_4 0
-#define DEBUG_START 0
-#define DEBUG_END   500
+#define DEBUG_START 6000
+#define DEBUG_END   6050
 /* 0 Default information about cores
  * DEBUG_1 Enables information about messages received and sent
  * DEBUG_2 Debug info on the id distribution algorithm
@@ -1138,25 +1138,8 @@ void leader_next_step() {
 		return;
 	}
 
-	if(in_charge == 0) {
-		forward_mode_on = 1;
-		send_function_signal(1, 0, current_id);
-	}
-
-	if(in_charge == 1) {
-
-		if(current_item->frequency != 0) {
-			send_function_signal(0,current_item->frequency, current_id);
-			current_item  = current_item->next;
-			current_id++;
-		}
-		else {
-			forward_mode_on = 1;
-			in_charge       = 0;
-			send_function_signal(1, 0, current_id);
-		}
-
-	}
+	forward_mode_on = 1;
+	send_function_signal(1, 0, current_id);
 
 }
 
@@ -1180,20 +1163,36 @@ void histogram_receive(uint payload) {
 
 		if(current_id > global_max_id) {
 
+			if(payload == -1){return;}
+
 			current_leader++;
 			send_function_signal(2, current_leader, payload);
 			return;
 		}
 
-		reported_ready++;
-
-		if(payload != -1){sum = sum + payload;}
+		if(payload != -1){
+			reported_ready++;
+			sum = sum + payload;
+		}
 		if(reported_ready == 15) {
+
 			reported_ready = 0;
 			forward_mode_on = 0;
+
+			//update leaders dictionary if necessary
+			if(current_id <= local_index.max_id){
+
+				node_t *found = search_dictionary_with_id(current_id);
+				if(found->frequency != 0) {
+					found->global_frequency = found->frequency + sum;
+				}
+
+			}
+
 			send_function_signal(0, sum, current_id);
 			current_id++;
 			sum = 0;
+
 		}
 
 	}
@@ -1249,8 +1248,15 @@ void histogram_receive(uint payload) {
 				uint the_leader = local_index.message[3];
 				if(the_leader == header.processor_id) {
 					uint start_id  = local_index.message_id;
-					record_unqiue_items(start_id,local_index.max_id);
-					send_state(local_index.max_id,2);
+
+					if(start_id <= local_index.max_id){
+						record_unqiue_items(start_id,local_index.max_id);
+						send_state(local_index.max_id+1,2);
+					}
+
+					if(start_id > local_index.max_id){
+						send_state(start_id,2);
+					}
 
 				#if defined(DEBUG_1) && (DEBUG_1 == 1)
 					if((time > DEBUG_START) && (time < DEBUG_END)) {
@@ -1386,7 +1392,6 @@ void retrieve_header_data() {
 
 void record_unqiue_items(uint start, uint end) {
 
-	log_info("ELVIS");
 	node_t *item = dictionary;
 
 	while(item->frequency != 0) {
@@ -1400,8 +1405,6 @@ void record_unqiue_items(uint start, uint end) {
 			if(item->id <= end) {
 				record_string_entry(item->entry,item->entry_size);
 				record_int_entry(item->global_frequency);
-				log_info("STRING   : %d",item->entry[0]);
-				log_info("FREQUENCY: %d",item->global_frequency);
 				item = item->next;
 			}
 
@@ -1424,7 +1427,6 @@ void record_string_entry(uint *int_arr, uint size) {
 
 	uint i = 0;
 	for(i = 0; i < size; i++) {
-	  log_info("Recording1: %d",int_arr[i]);
       buffer[num_ints*i + 0] = (int_arr[i] >> 24) & 0xFF;
 	  buffer[num_ints*i + 1] = (int_arr[i] >> 16) & 0xFF;
 	  buffer[num_ints*i + 2] = (int_arr[i] >> 8) & 0xFF;
