@@ -1,4 +1,3 @@
-
 from pacman.model.decorators import overrides
 from pacman.model.graphs.machine import MachineVertex
 from pacman.model.resources import CPUCyclesPerTickResource, DTCMResource
@@ -51,7 +50,7 @@ class Vertex(
 
     CORE_APP_IDENTIFIER = 0xBEEF
 
-    def __init__(self, label, columns, rows, string_size, num_string_cols, entries, function_id, state, constraints=None):
+    def __init__(self, label, columns, rows, string_size, num_string_cols, entries, initiate, function_id, state, constraints=None):
         MachineVertex.__init__(self, label=label, constraints=constraints)
 
         config = globals_variables.get_simulator().config
@@ -73,6 +72,7 @@ class Vertex(
         self.string_size     = string_size
         self.num_string_cols = num_string_cols 
         self.entries         = entries 
+        self.initiate        = initiate
         self.function_id     = function_id
 
         '''
@@ -123,6 +123,7 @@ class Vertex(
                           self.rows,
                           self.string_size,
                           self.num_string_cols,
+                          self.initiate,
                           self.function_id])   
         
         #write the string data entries
