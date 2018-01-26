@@ -106,7 +106,10 @@ struct header_info {
     * All string columns SHOULD be written to SDRAM first (from python) -
     * then and only then the integer columns
     */
-
+   uint initiate_send;
+   /* if 1, vertex will be the first one to send out spike
+    * if 0, vertex will wait until spike received
+    */
    uint function_id;
    /* holds id of function to be invoked
     * 0 - None
@@ -1363,7 +1366,8 @@ void retrieve_header_data() {
 	header.num_rows        = data_address[2];
 	header.string_size     = data_address[3];
 	header.num_string_cols = data_address[4];
-	header.function_id     = data_address[5];
+	header.initiate_send   = data_address[5];
+	header.function_id     = data_address[6];
 
 	reported_ready  = 0;
 	forward_mode_on = 0;

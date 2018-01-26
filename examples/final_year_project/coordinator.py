@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 from utilities.string_marshalling import _32intarray_to_int
 from utilities.string_marshalling import convert_string_to_integer_parcel
 
-class Vertex(
+class Coordinator(
         MachineVertex, MachineDataSpecableVertex, AbstractHasAssociatedBinary,
         AbstractReceiveBuffersToHost):
     
@@ -51,7 +51,7 @@ class Vertex(
 
     CORE_APP_IDENTIFIER = 0xBEEF
 
-    def __init__(self, label, columns, rows, string_size, num_string_cols, entries, function_id, state, constraints=None):
+    def __init__(self, label, columns, rows, string_size, num_string_cols, entries, initiate, function_id, state, constraints=None):
         MachineVertex.__init__(self, label=label, constraints=constraints)
 
         config = globals_variables.get_simulator().config
@@ -73,6 +73,7 @@ class Vertex(
         self.string_size     = string_size
         self.num_string_cols = num_string_cols 
         self.entries         = entries 
+        self.initiate        = initiate
         self.function_id     = function_id
 
         '''
@@ -100,7 +101,7 @@ class Vertex(
 
     @overrides(AbstractHasAssociatedBinary.get_binary_file_name)
     def get_binary_file_name(self):
-        return "vertex.aplx"
+        return "coordinator.aplx"
 
     @overrides(AbstractHasAssociatedBinary.get_binary_start_type)
     def get_binary_start_type(self):
@@ -123,6 +124,7 @@ class Vertex(
                           self.rows,
                           self.string_size,
                           self.num_string_cols,
+                          self.initiate,
                           self.function_id])   
         
         #write the string data entries
@@ -227,10 +229,10 @@ class Vertex(
             time_scale_factor))
         
         #load all required data onto the vertex
-        Vertex.load_data_on_vertices(self,spec,iptags)
+        Coordinator.load_data_on_vertices(self,spec,iptags)
         
         #build all required edges between the vertices
-        Vertex.configure_ring_edges(self,spec,routing_info,machine_graph)
+        Coordinator.configure_ring_edges(self,spec,routing_info,machine_graph)
         
         # End-of-Spec:
         spec.end_specification()

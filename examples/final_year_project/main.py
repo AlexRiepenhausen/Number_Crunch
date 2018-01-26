@@ -172,88 +172,85 @@ def load_data_onto_vertices(data, number_of_chips, columns, num_string_cols, fun
     
     num_processors = number_of_chips * 16
     num_data_rows  = len(data)
-    
-    rows_per_core = int(math.floor(num_data_rows/num_processors))
-    
-    leftovers = num_data_rows % num_processors
+    rows_per_core  = int(math.floor(num_data_rows/num_processors)) 
+    leftover_rows  = num_data_rows % num_processors
     
     row_count = 0
-
     vertices = []
-    for core in range(0, num_processors):
-            
-        #initiate if this is the first vertex in the circle
-        initiate = 0
-        if core%16 == 0:
-            initiate = 1
-          
-        #distribute the data evenly among the cores
+    
+    for processor in range(0, num_processors):
+                  
         add_leftover = 0
-        if core < leftovers:
+        if processor < leftover_rows:
             add_leftover = 1
             
-        data_parcel = [] 
+        data_parcel = pack_data(rows_per_core, row_count)      
+        vertex = set_vertex(data_parcel, rows_per_core + add_leftover)        
         
-        for row in range(0, rows_per_core + add_leftover):
+        vertices.append(vertex)   
             
-            data_row = []  
-            for z in range(0, len(columns)):
-                data_row.append(data[row_count][columns[z]])
+    make_circle(vertices, len(vertices), front_end)
+     
+def pack_data(rows_per_core, row_count):  
+    
+    data_parcel = [] 
+    
+    for row in range(0, rows_per_core):
             
-            row_count = row_count + 1  
-            data_parcel.append(data_row)
+        data_row = []  
+        for z in range(0, len(columns)):
+            data_row.append(data[row_count][columns[z]])
             
-        #load information onto the vertex             
-        current_vertex = front_end.add_machine_vertex(
+        row_count = row_count + 1  
+        data_parcel.append(data_row)   
+    
+    return data_parcel
+     
+        
+def set_vertex(data_parcel, rows_per_core): 
+            
+        vertex = front_end.add_machine_vertex(
             Vertex,
             {
             "columns":         len(columns),
-            "rows":            rows_per_core + add_leftover,
+            "rows":            rows_per_core,
             "string_size":     16,
             "num_string_cols": num_string_cols,
             "entries":         data_parcel,
-            "initiate":        initiate,
             "function_id":     function_id,
-            "state":           core
+            "state":           core_count
             },
-            label="Data packet at x {}".format(core))   
-           
-        vertices.append(current_vertex)   
-            
-    make_circle(vertices, len(vertices), front_end)
+            label="Data packet at x {}".format(core_count))  
         
-'''-----------------------------------------------------------------------------------------------------'''
+        core_count = core_count + 1
         
-#read the csv data with help form the parser class
-getData = parser('../../resources/date.csv')
-raw_data = getData.read_data()
+        return vertex  
+    
+    
 
 logger = logging.getLogger(__name__)
 
 front_end.setup(
     n_chips_required=None, model_binary_folder=os.path.dirname(__file__))
 
-'''
-calculate total number of 'free' cores for the given board
-(i.e. does not include those busy with SARK or reinjection)'''
 total_number_of_cores = \
     front_end.get_number_of_available_cores_on_machine()
+    
+getData = parser('../../resources/date.csv')    
+    
+data            = getData.read_data()
+number_of_chips = 1
+columns         = [0]
+num_string_cols = 1
+function_id     = 3
+core_count      = 0
 
-#param1: data
-#param2: number of chips used
-#param3: what columns to use
-#param4: how many string columns exist?
-#param5: function id
-load_data_onto_vertices(raw_data, 1, [0], 1, 2)
+load_data_onto_vertices()
 
 front_end.run(10000)
 
-placements = front_end.placements()
+placements     = front_end.placements()
 buffer_manager = front_end.buffer_manager()
 
-#write_unique_ids_to_csv(getData,1,len(raw_data))
-#display_linked_list_size()
-#display_results_function_one()
-#display_results_function_two()
 display_results_function_three()
 front_end.stop()
