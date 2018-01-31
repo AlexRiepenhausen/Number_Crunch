@@ -1,10 +1,9 @@
-from utilities.parser import parser
-
 import os
-import spinnaker_graph_front_end as front_end
 
-from examples.final_year_project.output import output_to_console
-from examples.final_year_project.input  import build_vertices
+import spinnaker_graph_front_end as front_end
+from utilities.parser import parser
+from data_input.build_vertices import load_data_onto_vertices
+from data_output.output_to_console import output_to_console
 
 front_end.setup(
     n_chips_required=None, model_binary_folder=os.path.dirname(__file__))
@@ -14,17 +13,24 @@ total_number_of_cores = \
     
 getData = parser('../../resources/date.csv')    
     
-data            = getData.read_data()
+data = getData.read_data()
 number_of_chips = 1
-columns         = [0]
+columns = [0]
 num_string_cols = 1
-function_id     = 3
+function_id = 2 
+
+load_data_onto_vertices(data,
+                        number_of_chips,
+                        columns,
+                        num_string_cols,
+                        function_id)
 
 front_end.run(10000)
 
-placements     = front_end.placements()
+placements = front_end.placements()
 buffer_manager = front_end.buffer_manager()
-output = output_to_console(placements, buffer_manager)
-output.display_results_function_three()
+
+results = output_to_console(placements, buffer_manager)
+results.function_three()
 
 front_end.stop()

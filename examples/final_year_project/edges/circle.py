@@ -19,52 +19,52 @@ def make_circle: Builds this cluster within a chip
 
 from pacman.model.graphs.machine import MachineEdge
 
-def make_circle(vertices, list_size, front_end):
+def make_circle(vertices, num_vertices, front_end):
      
     leader = 0
     
-    for x in range(0, list_size):
+    for i in range(0, num_vertices):
         
-        if vertices[x] is not None:           
+        if vertices[i] is not None:           
             
-            if x%16 < 15:
+            if i%16 < 15:
                 
                 #make ring
                 front_end.add_machine_edge_instance(
                 MachineEdge(
-                    vertices[x], vertices[x+1],
-                    label=(x)), vertices[x].RING)
+                    vertices[i], vertices[i+1],
+                    label=(i)), vertices[i].RING)
                 
                 
                 #direct response channel from vertex to leader
-                if x != leader:
+                if i != leader:
                     front_end.add_machine_edge_instance(
                         MachineEdge(
-                        vertices[x], vertices[leader],
-                        label=(x)), vertices[x].REPORT)
+                        vertices[i], vertices[leader],
+                        label=(i)), vertices[i].REPORT)
                 
             #if this is the leader vertex         
-            if x%16 == 0:     
+            if i%16 == 0:     
 
-                for y in range(1, 16):       
+                for j in range(1, 16):       
                     front_end.add_machine_edge_instance(
                         MachineEdge(
-                        vertices[leader], vertices[leader + y],
-                        label=(y-1)), vertices[x].COMMAND)
-                
-            if x%16 == 15:
+                        vertices[leader], vertices[leader + j],
+                        label=(j-1)), vertices[i].COMMAND)
+            
+            #if this is the last vertex in the cluster  
+            if i%16 == 15:
                 
                 #finish ring
                 front_end.add_machine_edge_instance(
                 MachineEdge(
-                    vertices[x], vertices[leader],
-                    label=(x)), vertices[x].RING) 
-                
+                    vertices[i], vertices[leader],
+                    label=(i)), vertices[i].RING) 
                 
                 front_end.add_machine_edge_instance(
                 MachineEdge(
-                    vertices[x], vertices[leader],
-                    label=(x)), vertices[x].REPORT)         
+                    vertices[i], vertices[leader],
+                    label=(i)), vertices[i].REPORT)         
                 
                 leader = leader + 16
                            

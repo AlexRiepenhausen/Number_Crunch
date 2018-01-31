@@ -9129,7 +9129,7 @@ Disassembly of section RO_DATA:
     6748:	74726576 00007865                       vertex..
 
 00006750 <build_date>:
-    6750:	5a32d9e5 2f637273 61746164 6570735f     ..2Zsrc/data_spe
+    6750:	5a72168f 2f637273 61746164 6570735f     ..rZsrc/data_spe
     6760:	69666963 69746163 632e6e6f 4e495b00     cification.c.[IN
     6770:	205d4f46 28202020 253a7325 3a296434     FO]    (%s:%4d):
     6780:	52445320 64204d41 20617461 69676562      SDRAM data begi

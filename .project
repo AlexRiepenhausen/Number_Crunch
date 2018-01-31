@@ -3,6 +3,10 @@
 	<name>spinnaker_graph_front_end</name>
 	<comment></comment>
 	<projects>
+		<project>spinn_common</project>
+		<project>spinnaker_tools</project>
+		<project>SpiNNFrontEndCommon</project>
+		<project>SpiNNMan</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

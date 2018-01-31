@@ -1,0 +1,5 @@
+source ~/git/spinnaker_tools/setup 
+Compile commands:
+export SPINN_DIRS=~/git/spinnaker_tools
+export PATH=$PATH:~/gcc-arm-none-eabi-5_4-2016q3/bin
+make 
