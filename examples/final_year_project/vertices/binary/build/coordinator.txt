@@ -1,44 +1,44 @@
 
-build/vertex.elf:     file format elf32-littlearm
-build/vertex.elf
+build/coordinator.elf:     file format elf32-littlearm
+build/coordinator.elf
 architecture: armv5te, flags 0x00000112:
 EXEC_P, HAS_SYMS, D_PAGED
 start address 0x00000000
 
 Program Header:
     LOAD off    0x00010000 vaddr 0x00000000 paddr 0x00000000 align 2**16
-         filesz 0x000072f8 memsz 0x000072f8 flags r-x
+         filesz 0x00007300 memsz 0x00007300 flags r-x
     LOAD off    0x00020000 vaddr 0x00400000 paddr 0x00400000 align 2**16
          filesz 0x00000014 memsz 0x00000938 flags rw-
 private flags = 5000200: [Version5 EABI] [soft-float ABI]
 
 Sections:
 Idx Name          Size      VMA       LMA       File off  Algn
-  0 RO_DATA       000072f8  00000000  00000000  00010000  2**3
+  0 RO_DATA       00007300  00000000  00000000  00010000  2**3
                   CONTENTS, ALLOC, LOAD, READONLY, CODE
   1 RW_DATA       00000014  00400000  00400000  00020000  2**2
                   CONTENTS, ALLOC, LOAD, DATA
   2 ZI_DATA       00000924  00400014  00400014  00020014  2**2
                   ALLOC
-  3 .debug_info   0001a3d8  00000000  00000000  00020014  2**0
+  3 .debug_info   0001a3d9  00000000  00000000  00020014  2**0
                   CONTENTS, READONLY, DEBUGGING
-  4 .debug_abbrev 0000358e  00000000  00000000  0003a3ec  2**0
+  4 .debug_abbrev 0000358e  00000000  00000000  0003a3ed  2**0
                   CONTENTS, READONLY, DEBUGGING
-  5 .debug_loc    00008ef9  00000000  00000000  0003d97a  2**0
+  5 .debug_loc    00008ef9  00000000  00000000  0003d97b  2**0
                   CONTENTS, READONLY, DEBUGGING
-  6 .debug_aranges 00000850  00000000  00000000  00046873  2**0
+  6 .debug_aranges 00000850  00000000  00000000  00046874  2**0
                   CONTENTS, READONLY, DEBUGGING
-  7 .debug_ranges 00001470  00000000  00000000  000470c3  2**0
+  7 .debug_ranges 00001470  00000000  00000000  000470c4  2**0
                   CONTENTS, READONLY, DEBUGGING
-  8 .debug_line   00003419  00000000  00000000  00048533  2**0
+  8 .debug_line   00003423  00000000  00000000  00048534  2**0
                   CONTENTS, READONLY, DEBUGGING
-  9 .debug_str    000036b4  00000000  00000000  0004b94c  2**0
+  9 .debug_str    000036be  00000000  00000000  0004b957  2**0
                   CONTENTS, READONLY, DEBUGGING
- 10 .comment      0000006e  00000000  00000000  0004f000  2**0
+ 10 .comment      0000006e  00000000  00000000  0004f015  2**0
                   CONTENTS, READONLY
- 11 .ARM.attributes 00000029  00000000  00000000  0004f06e  2**0
+ 11 .ARM.attributes 00000029  00000000  00000000  0004f083  2**0
                   CONTENTS, READONLY
- 12 .debug_frame  00001c64  00000000  00000000  0004f098  2**2
+ 12 .debug_frame  00001c64  00000000  00000000  0004f0ac  2**2
                   CONTENTS, READONLY, DEBUGGING
 SYMBOL TABLE:
 00000000 l    d  RO_DATA	00000000 RO_DATA
@@ -646,13 +646,13 @@ e5007ee0 l       *ABS*	00000000 RST_BLOCK_BASE
 00004dc4 l     F RO_DATA	00000040 io_buf_init
 00004f38 l     F RO_DATA	000000c4 io_put_fixed
 004001fc l     O ZI_DATA	00000004 io_msg
-00007180 l     O RO_DATA	00000011 hex
+00007188 l     O RO_DATA	00000011 hex
 00400200 l     O ZI_DATA	00000004 io_buf
 00400204 l     O ZI_DATA	00000004 buf_ptr
 00400208 l     O ZI_DATA	00000004 sp_ptr
 00000000 l    df *ABS*	00000000 sark_pkt.c
 00000000 l    df *ABS*	00000000 sark_div0.c
-00000000 l    df *ABS*	00000000 vertex.c
+00000000 l    df *ABS*	00000000 coordinator.c
 00400000 l     O RW_DATA	00000004 recording_flags
 00400014 l     O ZI_DATA	00000004 time
 00400020 l     O ZI_DATA	00000004 infinite_run
@@ -701,7 +701,7 @@ e5007ee0 l       *ABS*	00000000 RST_BLOCK_BASE
 00000000 l    df *ABS*	00000000 utoa.c
 00000000 l    df *ABS*	00000000 _udivsi3.o
 00006274 l       RO_DATA	00000000 .udivsi3_skip_div0_test
-00000000 l    df *ABS*	00000000 vertex_build.c
+00000000 l    df *ABS*	00000000 coordinator_build.c
 00006388 l     F RO_DATA	00000008 __spin1_pause_from_arm
 00006390 l     F RO_DATA	00000008 __spin1_msg_free_from_arm
 00006398 l     F RO_DATA	00000008 __sark_msg_free_from_arm
@@ -794,7 +794,7 @@ e5007ee0 l       *ABS*	00000000 RST_BLOCK_BASE
 00400008 g     O RW_DATA	00000004 mc_pkt_prio
 00400558 g     O ZI_DATA	00000004 time_out_block_start
 00005bd4 g     F RO_DATA	0000000a sark_post_main
-00007328 g       *ABS*	00000000 RW_FROM
+00007330 g       *ABS*	00000000 RW_FROM
 000001a8 g     F RO_DATA	00000000 cpu_irq_disable
 0040055c g     O ZI_DATA	00000004 in_charge
 0000604c g     F RO_DATA	00000058 __itoa
@@ -808,7 +808,7 @@ e5007ee0 l       *ABS*	00000000 RST_BLOCK_BASE
 00005930 g     F RO_DATA	00000008 spin1_delay_us
 00003398 g     F RO_DATA	0000001c simulation_handle_pause_resume
 0000435c g     F RO_DATA	000000e4 circular_buffer_initialize
-00006748 g     O RO_DATA	00000007 build_name
+0000674c g     O RO_DATA	0000000c build_name
 00400004 g     O RW_DATA	00000004 runtime
 00004e04 g     F RO_DATA	00000048 sark_io_buf_reset
 00002da4 g     F RO_DATA	000000cc receive_data
@@ -817,7 +817,7 @@ e5007ee0 l       *ABS*	00000000 RST_BLOCK_BASE
 000003e0 g     F RO_DATA	00000018 iobuf_data
 000015dc g     F RO_DATA	00000268 update_index_upon_message_received
 00004ae4 g     F RO_DATA	0000002c event_pause
-00006750 g     O RO_DATA	00000004 build_date
+00006758 g     O RO_DATA	00000004 build_date
 000012f8 g     F RO_DATA	000000d4 start_processing
 000006e4 g     F RO_DATA	00000054 find_instance_of
 0000020c g     F RO_DATA	00000000 sark_lock_free
@@ -925,7 +925,7 @@ e5007ee0 l       *ABS*	00000000 RST_BLOCK_BASE
 00004830 g     F RO_DATA	00000062 sark_cmd_read
 00003e50 g     F RO_DATA	00000300 recording_initialize
 00000924 g       *ABS*	00000000 ZI_LENGTH
-000072f8 g       RW_DATA	00000000 RO_LENGTH
+00007300 g       RW_DATA	00000000 RO_LENGTH
 00004540 g     F RO_DATA	00000030 sark_msg_get
 000002bc g     F RO_DATA	00000000 sark_delay_us
 00400870 g     O ZI_DATA	000000c8 tx_packet_queue
@@ -983,7 +983,7 @@ Disassembly of section RO_DATA:
       46:	0800      	.short	0x0800
 
 00000048 <code_top>:
-      48:	000072f8 	.word	0x000072f8
+      48:	00007300 	.word	0x00007300
 
 0000004c <heap_base>:
       4c:	00400938 	.word	0x00400938
@@ -3154,7 +3154,7 @@ Disassembly of section RO_DATA:
     1f48:	0040055c 	.word	0x0040055c
     1f4c:	000003c3 	.word	0x000003c3
     1f50:	000063b8 	.word	0x000063b8
-    1f54:	000063c4 	.word	0x000063c4
+    1f54:	000063c8 	.word	0x000063c8
 
 00001f58 <leader_next_step>:
     1f58:	e59f23b4 	ldr	r2, [pc, #948]	; 2314 <P2P_TABLE_SIZE+0x314>
@@ -3605,7 +3605,7 @@ Disassembly of section RO_DATA:
     262c:	e8bd81f0 	pop	{r4, r5, r6, r7, r8, pc}
     2630:	0000054a 	.word	0x0000054a
     2634:	000063b8 	.word	0x000063b8
-    2638:	000063f8 	.word	0x000063f8
+    2638:	000063fc 	.word	0x000063fc
     263c:	00400588 	.word	0x00400588
     2640:	0040056c 	.word	0x0040056c
     2644:	00400554 	.word	0x00400554
@@ -3613,19 +3613,19 @@ Disassembly of section RO_DATA:
     264c:	0040055c 	.word	0x0040055c
     2650:	004005ac 	.word	0x004005ac
     2654:	00000567 	.word	0x00000567
-    2658:	00006434 	.word	0x00006434
+    2658:	00006438 	.word	0x00006438
     265c:	00000568 	.word	0x00000568
-    2660:	0000645c 	.word	0x0000645c
+    2660:	00006460 	.word	0x00006460
     2664:	00000569 	.word	0x00000569
-    2668:	00006480 	.word	0x00006480
+    2668:	00006484 	.word	0x00006484
     266c:	0000056a 	.word	0x0000056a
-    2670:	000064a4 	.word	0x000064a4
+    2670:	000064a8 	.word	0x000064a8
     2674:	0000056b 	.word	0x0000056b
-    2678:	000064cc 	.word	0x000064cc
+    2678:	000064d0 	.word	0x000064d0
     267c:	0000056c 	.word	0x0000056c
-    2680:	000064ec 	.word	0x000064ec
+    2680:	000064f0 	.word	0x000064f0
     2684:	0000056d 	.word	0x0000056d
-    2688:	00006514 	.word	0x00006514
+    2688:	00006518 	.word	0x00006518
 
 0000268c <update>:
     268c:	e92d4070 	push	{r4, r5, r6, lr}
@@ -3711,12 +3711,12 @@ Disassembly of section RO_DATA:
     27cc:	00400000 	.word	0x00400000
     27d0:	000005e3 	.word	0x000005e3
     27d4:	000063b8 	.word	0x000063b8
-    27d8:	0000655c 	.word	0x0000655c
+    27d8:	00006560 	.word	0x00006560
     27dc:	000003cc 	.word	0x000003cc
     27e0:	00400558 	.word	0x00400558
     27e4:	00400560 	.word	0x00400560
     27e8:	000005cf 	.word	0x000005cf
-    27ec:	0000653c 	.word	0x0000653c
+    27ec:	00006540 	.word	0x00006540
 
 000027f0 <record_unqiue_items>:
     27f0:	e59f3138 	ldr	r3, [pc, #312]	; 2930 <record_unqiue_items+0x140>
@@ -4336,30 +4336,30 @@ Disassembly of section RO_DATA:
     3160:	eaffff91 	b	2fac <c_main+0x68>
     3164:	00000643 	.word	0x00000643
     3168:	000063b8 	.word	0x000063b8
-    316c:	0000658c 	.word	0x0000658c
+    316c:	00006590 	.word	0x00006590
     3170:	00400020 	.word	0x00400020
-    3174:	2b5bc093 	.word	0x2b5bc093
+    3174:	c4312c2a 	.word	0xc4312c2a
     3178:	00400014 	.word	0x00400014
     317c:	00400000 	.word	0x00400000
     3180:	00000607 	.word	0x00000607
-    3184:	000066b4 	.word	0x000066b4
+    3184:	000066b8 	.word	0x000066b8
     3188:	00000654 	.word	0x00000654
-    318c:	000066e4 	.word	0x000066e4
+    318c:	000066e8 	.word	0x000066e8
     3190:	00002da4 	.word	0x00002da4
     3194:	0000268c 	.word	0x0000268c
-    3198:	00006728 	.word	0x00006728
+    3198:	0000672c 	.word	0x0000672c
     319c:	0000065c 	.word	0x0000065c
     31a0:	00400544 	.word	0x00400544
     31a4:	00000627 	.word	0x00000627
-    31a8:	000065f4 	.word	0x000065f4
-    31ac:	00006618 	.word	0x00006618
+    31a8:	000065f8 	.word	0x000065f8
+    31ac:	0000661c 	.word	0x0000661c
     31b0:	0000062a 	.word	0x0000062a
     31b4:	00000636 	.word	0x00000636
-    31b8:	00006684 	.word	0x00006684
+    31b8:	00006688 	.word	0x00006688
     31bc:	00000613 	.word	0x00000613
-    31c0:	000065b8 	.word	0x000065b8
+    31c0:	000065bc 	.word	0x000065bc
     31c4:	0000062e 	.word	0x0000062e
-    31c8:	0000663c 	.word	0x0000663c
+    31c8:	00006640 	.word	0x00006640
 
 000031cc <data_specification_get_data_address>:
     31cc:	e92d4013 	push	{r0, r1, r4, lr}
@@ -4377,8 +4377,8 @@ Disassembly of section RO_DATA:
     31fc:	e1a00004 	mov	r0, r4
     3200:	e28dd008 	add	sp, sp, #8
     3204:	e8bd8010 	pop	{r4, pc}
-    3208:	00006754 	.word	0x00006754
-    320c:	0000676d 	.word	0x0000676d
+    3208:	0000675c 	.word	0x0000675c
+    320c:	00006775 	.word	0x00006775
 
 00003210 <data_specification_read_header>:
     3210:	e92d401f 	push	{r0, r1, r2, r3, r4, lr}
@@ -4414,10 +4414,10 @@ Disassembly of section RO_DATA:
     3288:	e28dd010 	add	sp, sp, #16
     328c:	e8bd8010 	pop	{r4, pc}
     3290:	ad130ad6 	.word	0xad130ad6
-    3294:	00006754 	.word	0x00006754
-    3298:	000067a5 	.word	0x000067a5
-    329c:	000067da 	.word	0x000067da
-    32a0:	00006811 	.word	0x00006811
+    3294:	0000675c 	.word	0x0000675c
+    3298:	000067ad 	.word	0x000067ad
+    329c:	000067e2 	.word	0x000067e2
+    32a0:	00006819 	.word	0x00006819
 
 000032a4 <data_specification_get_region>:
     32a4:	e2800002 	add	r0, r0, #2
@@ -4462,11 +4462,11 @@ Disassembly of section RO_DATA:
     3338:	e8bd4070 	pop	{r4, r5, r6, lr}
     333c:	e12fff13 	bx	r3
     3340:	0040003c 	.word	0x0040003c
-    3344:	00006844 	.word	0x00006844
-    3348:	00006855 	.word	0x00006855
+    3344:	0000684c 	.word	0x0000684c
+    3348:	0000685d 	.word	0x0000685d
     334c:	00400688 	.word	0x00400688
     3350:	00400030 	.word	0x00400030
-    3354:	0000688e 	.word	0x0000688e
+    3354:	00006896 	.word	0x00006896
 
 00003358 <_simulation_sdp_callback_handler>:
     3358:	e59f3010 	ldr	r3, [pc, #16]	; 3370 <_simulation_sdp_callback_handler+0x18>
@@ -4635,20 +4635,20 @@ Disassembly of section RO_DATA:
     35bc:	e28dd00c 	add	sp, sp, #12
     35c0:	e8bd4030 	pop	{r4, r5, lr}
     35c4:	ea000b71 	b	6390 <__spin1_msg_free_from_arm>
-    35c8:	00006844 	.word	0x00006844
-    35cc:	000068c6 	.word	0x000068c6
+    35c8:	0000684c 	.word	0x0000684c
+    35cc:	000068ce 	.word	0x000068ce
     35d0:	00400034 	.word	0x00400034
-    35d4:	00006903 	.word	0x00006903
-    35d8:	00006932 	.word	0x00006932
-    35dc:	0000694f 	.word	0x0000694f
-    35e0:	0000698c 	.word	0x0000698c
+    35d4:	0000690b 	.word	0x0000690b
+    35d8:	0000693a 	.word	0x0000693a
+    35dc:	00006957 	.word	0x00006957
+    35e0:	00006994 	.word	0x00006994
     35e4:	0040002c 	.word	0x0040002c
     35e8:	00400038 	.word	0x00400038
     35ec:	00400040 	.word	0x00400040
-    35f0:	000069d7 	.word	0x000069d7
-    35f4:	00006a08 	.word	0x00006a08
-    35f8:	00006a26 	.word	0x00006a26
-    35fc:	00006a57 	.word	0x00006a57
+    35f0:	000069df 	.word	0x000069df
+    35f4:	00006a10 	.word	0x00006a10
+    35f8:	00006a2e 	.word	0x00006a2e
+    35fc:	00006a5f 	.word	0x00006a5f
 
 00003600 <simulation_sdp_callback_on>:
     3600:	e59f3038 	ldr	r3, [pc, #56]	; 3640 <simulation_sdp_callback_on+0x40>
@@ -4668,8 +4668,8 @@ Disassembly of section RO_DATA:
     3638:	e28dd00c 	add	sp, sp, #12
     363c:	e49df004 	pop	{pc}		; (ldr pc, [sp], #4)
     3640:	00400084 	.word	0x00400084
-    3644:	00006844 	.word	0x00006844
-    3648:	00006a99 	.word	0x00006a99
+    3644:	0000684c 	.word	0x0000684c
+    3648:	00006aa1 	.word	0x00006aa1
 
 0000364c <simulation_dma_transfer_done_callback_on>:
     364c:	e350000f 	cmp	r0, #15
@@ -4696,10 +4696,10 @@ Disassembly of section RO_DATA:
     36a0:	e3a00000 	mov	r0, #0
     36a4:	e28dd00c 	add	sp, sp, #12
     36a8:	e49df004 	pop	{pc}		; (ldr pc, [sp], #4)
-    36ac:	00006844 	.word	0x00006844
-    36b0:	00006af5 	.word	0x00006af5
+    36ac:	0000684c 	.word	0x0000684c
+    36b0:	00006afd 	.word	0x00006afd
     36b4:	00400044 	.word	0x00400044
-    36b8:	00006b55 	.word	0x00006b55
+    36b8:	00006b5d 	.word	0x00006b5d
 
 000036bc <simulation_initialise>:
     36bc:	e92d401f 	push	{r0, r1, r2, r3, r4, lr}
@@ -4747,10 +4747,10 @@ Disassembly of section RO_DATA:
     3764:	e28dd010 	add	sp, sp, #16
     3768:	e8bd8010 	pop	{r4, pc}
     376c:	00000113 	.word	0x00000113
-    3770:	00006844 	.word	0x00006844
-    3774:	00006bb9 	.word	0x00006bb9
+    3770:	0000684c 	.word	0x0000684c
+    3774:	00006bc1 	.word	0x00006bc1
     3778:	0000011b 	.word	0x0000011b
-    377c:	00006c09 	.word	0x00006c09
+    377c:	00006c11 	.word	0x00006c11
     3780:	0040002c 	.word	0x0040002c
     3784:	00400040 	.word	0x00400040
     3788:	00003358 	.word	0x00003358
@@ -5037,8 +5037,8 @@ Disassembly of section RO_DATA:
     3bbc:	e8bd8ff0 	pop	{r4, r5, r6, r7, r8, r9, sl, fp, pc}
     3bc0:	004001f0 	.word	0x004001f0
     3bc4:	000001b6 	.word	0x000001b6
-    3bc8:	00006c8a 	.word	0x00006c8a
-    3bcc:	00006c9a 	.word	0x00006c9a
+    3bc8:	00006c92 	.word	0x00006c92
+    3bcc:	00006ca2 	.word	0x00006ca2
 
 00003bd0 <recording_record>:
     3bd0:	e3a03000 	mov	r3, #0
@@ -5127,12 +5127,12 @@ Disassembly of section RO_DATA:
     3d0c:	004001f0 	.word	0x004001f0
     3d10:	004000a4 	.word	0x004000a4
     3d14:	000001f9 	.word	0x000001f9
-    3d18:	00006c8a 	.word	0x00006c8a
-    3d1c:	00006cda 	.word	0x00006cda
+    3d18:	00006c92 	.word	0x00006c92
+    3d1c:	00006ce2 	.word	0x00006ce2
     3d20:	000001fd 	.word	0x000001fd
-    3d24:	00006d48 	.word	0x00006d48
+    3d24:	00006d50 	.word	0x00006d50
     3d28:	00000202 	.word	0x00000202
-    3d2c:	00006d91 	.word	0x00006d91
+    3d2c:	00006d99 	.word	0x00006d99
 
 00003d30 <recording_reset>:
     3d30:	e92d40f0 	push	{r4, r5, r6, r7, lr}
@@ -5203,10 +5203,10 @@ Disassembly of section RO_DATA:
     3e34:	004001f0 	.word	0x004001f0
     3e38:	004000b8 	.word	0x004000b8
     3e3c:	000002a6 	.word	0x000002a6
-    3e40:	00006c8a 	.word	0x00006c8a
-    3e44:	00006db9 	.word	0x00006db9
+    3e40:	00006c92 	.word	0x00006c92
+    3e44:	00006dc1 	.word	0x00006dc1
     3e48:	000002b2 	.word	0x000002b2
-    3e4c:	00006e1d 	.word	0x00006e1d
+    3e4c:	00006e25 	.word	0x00006e25
 
 00003e50 <recording_initialize>:
     3e50:	e92d4ff0 	push	{r4, r5, r6, r7, r8, r9, sl, fp, lr}
@@ -5384,18 +5384,18 @@ Disassembly of section RO_DATA:
     4100:	004001e8 	.word	0x004001e8
     4104:	004000ac 	.word	0x004000ac
     4108:	00000236 	.word	0x00000236
-    410c:	00006c8a 	.word	0x00006c8a
-    4110:	00006e5a 	.word	0x00006e5a
+    410c:	00006c92 	.word	0x00006c92
+    4110:	00006e62 	.word	0x00006e62
     4114:	004000b8 	.word	0x004000b8
-    4118:	00006ecb 	.word	0x00006ecb
+    4118:	00006ed3 	.word	0x00006ed3
     411c:	004001e4 	.word	0x004001e4
     4120:	00000242 	.word	0x00000242
-    4124:	00006f11 	.word	0x00006f11
+    4124:	00006f19 	.word	0x00006f19
     4128:	e5007f00 	.word	0xe5007f00
     412c:	00000259 	.word	0x00000259
-    4130:	00006f50 	.word	0x00006f50
+    4130:	00006f58 	.word	0x00006f58
     4134:	004001f0 	.word	0x004001f0
-    4138:	00006f98 	.word	0x00006f98
+    4138:	00006fa0 	.word	0x00006fa0
     413c:	004000bc 	.word	0x004000bc
     4140:	004000a8 	.word	0x004000a8
     4144:	004001f8 	.word	0x004001f8
@@ -5528,8 +5528,8 @@ Disassembly of section RO_DATA:
     4338:	004001f0 	.word	0x004001f0
     433c:	004001e8 	.word	0x004001e8
     4340:	004001f8 	.word	0x004001f8
-    4344:	00006c8a 	.word	0x00006c8a
-    4348:	00006fdb 	.word	0x00006fdb
+    4344:	00006c92 	.word	0x00006c92
+    4348:	00006fe3 	.word	0x00006fe3
     434c:	004000a8 	.word	0x004000a8
     4350:	00004008 	.word	0x00004008
     4354:	004001ec 	.word	0x004001ec
@@ -5589,10 +5589,10 @@ Disassembly of section RO_DATA:
     4424:	fa0002f4 	blx	4ffc <io_printf>
     4428:	e1a00005 	mov	r0, r5
     442c:	eaffffe2 	b	43bc <circular_buffer_initialize+0x60>
-    4430:	00007078 	.word	0x00007078
-    4434:	00007090 	.word	0x00007090
-    4438:	000070d0 	.word	0x000070d0
-    443c:	00007110 	.word	0x00007110
+    4430:	00007080 	.word	0x00007080
+    4434:	00007098 	.word	0x00007098
+    4438:	000070d8 	.word	0x000070d8
+    443c:	00007118 	.word	0x00007118
 
 00004440 <circular_buffer_add>:
     4440:	e590c00c 	ldr	ip, [r0, #12]
@@ -5915,7 +5915,7 @@ Disassembly of section RO_DATA:
     4728:	e2000034 	.word	0xe2000034
     472c:	e5007000 	.word	0xe5007000
     4730:	00030101 	.word	0x00030101
-    4734:	00006748 	.word	0x00006748
+    4734:	0000674c 	.word	0x0000674c
     4738:	e5007ffc 	.word	0xe5007ffc
     473c:	00000300 	.word	0x00000300
     4740:	00004bf4 	.word	0x00004bf4
@@ -6018,10 +6018,10 @@ Disassembly of section RO_DATA:
     4816:	bd10      	pop	{r4, pc}
     4818:	004005b0 	.word	0x004005b0
     481c:	e5007f00 	.word	0xe5007f00
-    4820:	0000716b 	.word	0x0000716b
+    4820:	00007173 	.word	0x00007173
     4824:	ffff0100 	.word	0xffff0100
-    4828:	00006750 	.word	0x00006750
-    482c:	0000717a 	.word	0x0000717a
+    4828:	00006758 	.word	0x00006758
+    482c:	00007182 	.word	0x00007182
 
 00004830 <sark_cmd_read>:
     4830:	6982      	ldr	r2, [r0, #24]
@@ -7283,7 +7283,7 @@ Disassembly of section RO_DATA:
     5294:	4718      	bx	r3
     5296:	46c0      	nop			; (mov r8, r8)
     5298:	00400208 	.word	0x00400208
-    529c:	00007180 	.word	0x00007180
+    529c:	00007188 	.word	0x00007188
     52a0:	3fffffff 	.word	0x3fffffff
 
 000052a4 <__aeabi_ldiv0>:
@@ -7863,15 +7863,15 @@ Disassembly of section RO_DATA:
     57ba:	bd10      	pop	{r4, pc}
     57bc:	004006d8 	.word	0x004006d8
     57c0:	e1000300 	.word	0xe1000300
-    57c4:	00007191 	.word	0x00007191
+    57c4:	00007199 	.word	0x00007199
     57c8:	e1000304 	.word	0xe1000304
     57cc:	e1000320 	.word	0xe1000320
-    57d0:	000071b7 	.word	0x000071b7
+    57d0:	000071bf 	.word	0x000071bf
     57d4:	00400688 	.word	0x00400688
-    57d8:	000071dd 	.word	0x000071dd
-    57dc:	00007203 	.word	0x00007203
+    57d8:	000071e5 	.word	0x000071e5
+    57dc:	0000720b 	.word	0x0000720b
     57e0:	40000040 	.word	0x40000040
-    57e4:	0000722c 	.word	0x0000722c
+    57e4:	00007234 	.word	0x00007234
 
 000057e8 <report_warns>:
     57e8:	b510      	push	{r4, lr}
@@ -7900,9 +7900,9 @@ Disassembly of section RO_DATA:
     581c:	bd10      	pop	{r4, pc}
     581e:	46c0      	nop			; (mov r8, r8)
     5820:	00400688 	.word	0x00400688
-    5824:	0000724b 	.word	0x0000724b
-    5828:	00007277 	.word	0x00007277
-    582c:	000072a2 	.word	0x000072a2
+    5824:	00007253 	.word	0x00007253
+    5828:	0000727f 	.word	0x0000727f
+    582c:	000072aa 	.word	0x000072aa
 
 00005830 <start>:
     5830:	b5f8      	push	{r3, r4, r5, r6, r7, lr}
@@ -8796,7 +8796,7 @@ Disassembly of section RO_DATA:
     6264:	e28dd02c 	add	sp, sp, #44	; 0x2c
     6268:	e8bd43f0 	pop	{r4, r5, r6, r7, r8, r9, lr}
     626c:	e12fff1e 	bx	lr
-    6270:	000072d0 	.word	0x000072d0
+    6270:	000072d8 	.word	0x000072d8
 
 00006274 <__aeabi_uidiv>:
     6274:	e2512001 	subs	r2, r1, #1
@@ -8896,425 +8896,426 @@ Disassembly of section RO_DATA:
     63b4:	00005925 	.word	0x00005925
 
 000063b8 <__init_array_end>:
-    63b8:	74726576 	.word	0x74726576
-    63bc:	632e7865 	.word	0x632e7865
-    63c0:	00000000 	.word	0x00000000
-    63c4:	464e495b 	.word	0x464e495b
-    63c8:	20205d4f 	.word	0x20205d4f
-    63cc:	25282020 	.word	0x25282020
-    63d0:	34253a73 	.word	0x34253a73
-    63d4:	203a2964 	.word	0x203a2964
-    63d8:	20444e45 	.word	0x20444e45
-    63dc:	4920464f 	.word	0x4920464f
-    63e0:	53412044 	.word	0x53412044
-    63e4:	4e474953 	.word	0x4e474953
-    63e8:	544e454d 	.word	0x544e454d
-    63ec:	4f525020 	.word	0x4f525020
-    63f0:	53534543 	.word	0x53534543
-    63f4:	0000000a 	.word	0x0000000a
-    63f8:	464e495b 	.word	0x464e495b
-    63fc:	20205d4f 	.word	0x20205d4f
-    6400:	25282020 	.word	0x25282020
-    6404:	34253a73 	.word	0x34253a73
-    6408:	203a2964 	.word	0x203a2964
-    640c:	75737349 	.word	0x75737349
-    6410:	20676e69 	.word	0x20676e69
-    6414:	72655627 	.word	0x72655627
-    6418:	27786574 	.word	0x27786574
-    641c:	6f726620 	.word	0x6f726620
-    6420:	6863206d 	.word	0x6863206d
-    6424:	25207069 	.word	0x25207069
-    6428:	63202c64 	.word	0x63202c64
-    642c:	2065726f 	.word	0x2065726f
-    6430:	000a6425 	.word	0x000a6425
-    6434:	464e495b 	.word	0x464e495b
-    6438:	20205d4f 	.word	0x20205d4f
-    643c:	25282020 	.word	0x25282020
-    6440:	34253a73 	.word	0x34253a73
-    6444:	203a2964 	.word	0x203a2964
-    6448:	636f7250 	.word	0x636f7250
-    644c:	6f737365 	.word	0x6f737365
-    6450:	64692072 	.word	0x64692072
-    6454:	6425203a 	.word	0x6425203a
-    6458:	0000000a 	.word	0x0000000a
-    645c:	464e495b 	.word	0x464e495b
-    6460:	20205d4f 	.word	0x20205d4f
-    6464:	25282020 	.word	0x25282020
-    6468:	34253a73 	.word	0x34253a73
-    646c:	203a2964 	.word	0x203a2964
-    6470:	5f6d754e 	.word	0x5f6d754e
-    6474:	736c6f63 	.word	0x736c6f63
-    6478:	6425203a 	.word	0x6425203a
-    647c:	0000000a 	.word	0x0000000a
-    6480:	464e495b 	.word	0x464e495b
-    6484:	20205d4f 	.word	0x20205d4f
-    6488:	25282020 	.word	0x25282020
-    648c:	34253a73 	.word	0x34253a73
-    6490:	203a2964 	.word	0x203a2964
-    6494:	5f6d754e 	.word	0x5f6d754e
-    6498:	73776f72 	.word	0x73776f72
-    649c:	6425203a 	.word	0x6425203a
-    64a0:	0000000a 	.word	0x0000000a
-    64a4:	464e495b 	.word	0x464e495b
-    64a8:	20205d4f 	.word	0x20205d4f
-    64ac:	25282020 	.word	0x25282020
-    64b0:	34253a73 	.word	0x34253a73
-    64b4:	203a2964 	.word	0x203a2964
-    64b8:	69727473 	.word	0x69727473
-    64bc:	735f676e 	.word	0x735f676e
-    64c0:	3a657a69 	.word	0x3a657a69
-    64c4:	0a642520 	.word	0x0a642520
-    64c8:	00000000 	.word	0x00000000
-    64cc:	464e495b 	.word	0x464e495b
-    64d0:	20205d4f 	.word	0x20205d4f
-    64d4:	25282020 	.word	0x25282020
-    64d8:	34253a73 	.word	0x34253a73
-    64dc:	203a2964 	.word	0x203a2964
-    64e0:	67616c66 	.word	0x67616c66
-    64e4:	25203a20 	.word	0x25203a20
-    64e8:	00000a64 	.word	0x00000a64
-    64ec:	464e495b 	.word	0x464e495b
-    64f0:	20205d4f 	.word	0x20205d4f
-    64f4:	25282020 	.word	0x25282020
-    64f8:	34253a73 	.word	0x34253a73
-    64fc:	203a2964 	.word	0x203a2964
-    6500:	74696e69 	.word	0x74696e69
-    6504:	5f657461 	.word	0x5f657461
-    6508:	646e6573 	.word	0x646e6573
-    650c:	25203a20 	.word	0x25203a20
-    6510:	00000a64 	.word	0x00000a64
-    6514:	464e495b 	.word	0x464e495b
-    6518:	20205d4f 	.word	0x20205d4f
-    651c:	25282020 	.word	0x25282020
-    6520:	34253a73 	.word	0x34253a73
-    6524:	203a2964 	.word	0x203a2964
-    6528:	636e7566 	.word	0x636e7566
-    652c:	6e6f6974 	.word	0x6e6f6974
-    6530:	3a64695f 	.word	0x3a64695f
-    6534:	0a642520 	.word	0x0a642520
-    6538:	00000000 	.word	0x00000000
-    653c:	464e495b 	.word	0x464e495b
-    6540:	20205d4f 	.word	0x20205d4f
-    6544:	25282020 	.word	0x25282020
-    6548:	34253a73 	.word	0x34253a73
-    654c:	203a2964 	.word	0x203a2964
-    6550:	656d6974 	.word	0x656d6974
-    6554:	0a74756f 	.word	0x0a74756f
-    6558:	00000000 	.word	0x00000000
-    655c:	464e495b 	.word	0x464e495b
-    6560:	20205d4f 	.word	0x20205d4f
-    6564:	25282020 	.word	0x25282020
-    6568:	34253a73 	.word	0x34253a73
-    656c:	203a2964 	.word	0x203a2964
-    6570:	61647075 	.word	0x61647075
-    6574:	676e6974 	.word	0x676e6974
-    6578:	63657220 	.word	0x63657220
-    657c:	6964726f 	.word	0x6964726f
-    6580:	7220676e 	.word	0x7220676e
-    6584:	6f696765 	.word	0x6f696765
-    6588:	000a736e 	.word	0x000a736e
-    658c:	464e495b 	.word	0x464e495b
-    6590:	20205d4f 	.word	0x20205d4f
-    6594:	25282020 	.word	0x25282020
-    6598:	34253a73 	.word	0x34253a73
-    659c:	203a2964 	.word	0x203a2964
-    65a0:	72617473 	.word	0x72617473
-    65a4:	676e6974 	.word	0x676e6974
-    65a8:	72657620 	.word	0x72657620
-    65ac:	20786574 	.word	0x20786574
-    65b0:	74736574 	.word	0x74736574
-    65b4:	00000a0a 	.word	0x00000a0a
-    65b8:	464e495b 	.word	0x464e495b
-    65bc:	20205d4f 	.word	0x20205d4f
-    65c0:	25282020 	.word	0x25282020
-    65c4:	34253a73 	.word	0x34253a73
-    65c8:	203a2964 	.word	0x203a2964
-    65cc:	6c696166 	.word	0x6c696166
-    65d0:	74206465 	.word	0x74206465
-    65d4:	6572206f 	.word	0x6572206f
-    65d8:	74206461 	.word	0x74206461
-    65dc:	64206568 	.word	0x64206568
-    65e0:	20617461 	.word	0x20617461
-    65e4:	63657073 	.word	0x63657073
-    65e8:	61656820 	.word	0x61656820
-    65ec:	0a726564 	.word	0x0a726564
-    65f0:	00000000 	.word	0x00000000
-    65f4:	464e495b 	.word	0x464e495b
-    65f8:	20205d4f 	.word	0x20205d4f
-    65fc:	25282020 	.word	0x25282020
-    6600:	34253a73 	.word	0x34253a73
-    6604:	203a2964 	.word	0x203a2964
-    6608:	626d756e 	.word	0x626d756e
-    660c:	6b207265 	.word	0x6b207265
-    6610:	0a737965 	.word	0x0a737965
-    6614:	00000000 	.word	0x00000000
-    6618:	464e495b 	.word	0x464e495b
-    661c:	20205d4f 	.word	0x20205d4f
-    6620:	25282020 	.word	0x25282020
-    6624:	34253a73 	.word	0x34253a73
-    6628:	203a2964 	.word	0x203a2964
-    662c:	6b20796d 	.word	0x6b20796d
-    6630:	69207965 	.word	0x69207965
-    6634:	64252073 	.word	0x64252073
-    6638:	00000a0a 	.word	0x00000a0a
-    663c:	5252455b 	.word	0x5252455b
-    6640:	205d524f 	.word	0x205d524f
-    6644:	25282020 	.word	0x25282020
-    6648:	34253a73 	.word	0x34253a73
-    664c:	203a2964 	.word	0x203a2964
-    6650:	61656c70 	.word	0x61656c70
-    6654:	66206573 	.word	0x66206573
-    6658:	74207869 	.word	0x74207869
-    665c:	61206568 	.word	0x61206568
-    6660:	696c7070 	.word	0x696c7070
-    6664:	69746163 	.word	0x69746163
-    6668:	66206e6f 	.word	0x66206e6f
-    666c:	69726261 	.word	0x69726261
-    6670:	6e612063 	.word	0x6e612063
-    6674:	72742064 	.word	0x72742064
-    6678:	67612079 	.word	0x67612079
-    667c:	0a6e6961 	.word	0x0a6e6961
-    6680:	0000000a 	.word	0x0000000a
-    6684:	464e495b 	.word	0x464e495b
-    6688:	20205d4f 	.word	0x20205d4f
-    668c:	25282020 	.word	0x25282020
-    6690:	34253a73 	.word	0x34253a73
-    6694:	203a2964 	.word	0x203a2964
-    6698:	6920796d 	.word	0x6920796d
-    669c:	6974696e 	.word	0x6974696e
-    66a0:	73206c61 	.word	0x73206c61
-    66a4:	65746174 	.word	0x65746174
-    66a8:	20736920 	.word	0x20736920
-    66ac:	0a0a6425 	.word	0x0a0a6425
-    66b0:	00000000 	.word	0x00000000
-    66b4:	464e495b 	.word	0x464e495b
-    66b8:	20205d4f 	.word	0x20205d4f
-    66bc:	25282020 	.word	0x25282020
-    66c0:	34253a73 	.word	0x34253a73
-    66c4:	203a2964 	.word	0x203a2964
-    66c8:	6f636552 	.word	0x6f636552
-    66cc:	6e696472 	.word	0x6e696472
-    66d0:	6c662067 	.word	0x6c662067
-    66d4:	20736761 	.word	0x20736761
-    66d8:	7830203d 	.word	0x7830203d
-    66dc:	78383025 	.word	0x78383025
-    66e0:	0000000a 	.word	0x0000000a
-    66e4:	464e495b 	.word	0x464e495b
-    66e8:	20205d4f 	.word	0x20205d4f
-    66ec:	25282020 	.word	0x25282020
-    66f0:	34253a73 	.word	0x34253a73
-    66f4:	203a2964 	.word	0x203a2964
-    66f8:	74746573 	.word	0x74746573
-    66fc:	20676e69 	.word	0x20676e69
-    6700:	656d6974 	.word	0x656d6974
-    6704:	6f742072 	.word	0x6f742072
-    6708:	65786520 	.word	0x65786520
-    670c:	65747563 	.word	0x65747563
-    6710:	65766520 	.word	0x65766520
-    6714:	25207972 	.word	0x25207972
-    6718:	696d2064 	.word	0x696d2064
-    671c:	736f7263 	.word	0x736f7263
-    6720:	6e6f6365 	.word	0x6e6f6365
-    6724:	000a7364 	.word	0x000a7364
-    6728:	464e495b 	.word	0x464e495b
-    672c:	20205d4f 	.word	0x20205d4f
-    6730:	25282020 	.word	0x25282020
-    6734:	34253a73 	.word	0x34253a73
-    6738:	203a2964 	.word	0x203a2964
-    673c:	72617453 	.word	0x72617453
-    6740:	676e6974 	.word	0x676e6974
-    6744:	00000a0a 	.word	0x00000a0a
+    63b8:	726f6f63 	.word	0x726f6f63
+    63bc:	616e6964 	.word	0x616e6964
+    63c0:	2e726f74 	.word	0x2e726f74
+    63c4:	00000063 	.word	0x00000063
+    63c8:	464e495b 	.word	0x464e495b
+    63cc:	20205d4f 	.word	0x20205d4f
+    63d0:	25282020 	.word	0x25282020
+    63d4:	34253a73 	.word	0x34253a73
+    63d8:	203a2964 	.word	0x203a2964
+    63dc:	20444e45 	.word	0x20444e45
+    63e0:	4920464f 	.word	0x4920464f
+    63e4:	53412044 	.word	0x53412044
+    63e8:	4e474953 	.word	0x4e474953
+    63ec:	544e454d 	.word	0x544e454d
+    63f0:	4f525020 	.word	0x4f525020
+    63f4:	53534543 	.word	0x53534543
+    63f8:	0000000a 	.word	0x0000000a
+    63fc:	464e495b 	.word	0x464e495b
+    6400:	20205d4f 	.word	0x20205d4f
+    6404:	25282020 	.word	0x25282020
+    6408:	34253a73 	.word	0x34253a73
+    640c:	203a2964 	.word	0x203a2964
+    6410:	75737349 	.word	0x75737349
+    6414:	20676e69 	.word	0x20676e69
+    6418:	72655627 	.word	0x72655627
+    641c:	27786574 	.word	0x27786574
+    6420:	6f726620 	.word	0x6f726620
+    6424:	6863206d 	.word	0x6863206d
+    6428:	25207069 	.word	0x25207069
+    642c:	63202c64 	.word	0x63202c64
+    6430:	2065726f 	.word	0x2065726f
+    6434:	000a6425 	.word	0x000a6425
+    6438:	464e495b 	.word	0x464e495b
+    643c:	20205d4f 	.word	0x20205d4f
+    6440:	25282020 	.word	0x25282020
+    6444:	34253a73 	.word	0x34253a73
+    6448:	203a2964 	.word	0x203a2964
+    644c:	636f7250 	.word	0x636f7250
+    6450:	6f737365 	.word	0x6f737365
+    6454:	64692072 	.word	0x64692072
+    6458:	6425203a 	.word	0x6425203a
+    645c:	0000000a 	.word	0x0000000a
+    6460:	464e495b 	.word	0x464e495b
+    6464:	20205d4f 	.word	0x20205d4f
+    6468:	25282020 	.word	0x25282020
+    646c:	34253a73 	.word	0x34253a73
+    6470:	203a2964 	.word	0x203a2964
+    6474:	5f6d754e 	.word	0x5f6d754e
+    6478:	736c6f63 	.word	0x736c6f63
+    647c:	6425203a 	.word	0x6425203a
+    6480:	0000000a 	.word	0x0000000a
+    6484:	464e495b 	.word	0x464e495b
+    6488:	20205d4f 	.word	0x20205d4f
+    648c:	25282020 	.word	0x25282020
+    6490:	34253a73 	.word	0x34253a73
+    6494:	203a2964 	.word	0x203a2964
+    6498:	5f6d754e 	.word	0x5f6d754e
+    649c:	73776f72 	.word	0x73776f72
+    64a0:	6425203a 	.word	0x6425203a
+    64a4:	0000000a 	.word	0x0000000a
+    64a8:	464e495b 	.word	0x464e495b
+    64ac:	20205d4f 	.word	0x20205d4f
+    64b0:	25282020 	.word	0x25282020
+    64b4:	34253a73 	.word	0x34253a73
+    64b8:	203a2964 	.word	0x203a2964
+    64bc:	69727473 	.word	0x69727473
+    64c0:	735f676e 	.word	0x735f676e
+    64c4:	3a657a69 	.word	0x3a657a69
+    64c8:	0a642520 	.word	0x0a642520
+    64cc:	00000000 	.word	0x00000000
+    64d0:	464e495b 	.word	0x464e495b
+    64d4:	20205d4f 	.word	0x20205d4f
+    64d8:	25282020 	.word	0x25282020
+    64dc:	34253a73 	.word	0x34253a73
+    64e0:	203a2964 	.word	0x203a2964
+    64e4:	67616c66 	.word	0x67616c66
+    64e8:	25203a20 	.word	0x25203a20
+    64ec:	00000a64 	.word	0x00000a64
+    64f0:	464e495b 	.word	0x464e495b
+    64f4:	20205d4f 	.word	0x20205d4f
+    64f8:	25282020 	.word	0x25282020
+    64fc:	34253a73 	.word	0x34253a73
+    6500:	203a2964 	.word	0x203a2964
+    6504:	74696e69 	.word	0x74696e69
+    6508:	5f657461 	.word	0x5f657461
+    650c:	646e6573 	.word	0x646e6573
+    6510:	25203a20 	.word	0x25203a20
+    6514:	00000a64 	.word	0x00000a64
+    6518:	464e495b 	.word	0x464e495b
+    651c:	20205d4f 	.word	0x20205d4f
+    6520:	25282020 	.word	0x25282020
+    6524:	34253a73 	.word	0x34253a73
+    6528:	203a2964 	.word	0x203a2964
+    652c:	636e7566 	.word	0x636e7566
+    6530:	6e6f6974 	.word	0x6e6f6974
+    6534:	3a64695f 	.word	0x3a64695f
+    6538:	0a642520 	.word	0x0a642520
+    653c:	00000000 	.word	0x00000000
+    6540:	464e495b 	.word	0x464e495b
+    6544:	20205d4f 	.word	0x20205d4f
+    6548:	25282020 	.word	0x25282020
+    654c:	34253a73 	.word	0x34253a73
+    6550:	203a2964 	.word	0x203a2964
+    6554:	656d6974 	.word	0x656d6974
+    6558:	0a74756f 	.word	0x0a74756f
+    655c:	00000000 	.word	0x00000000
+    6560:	464e495b 	.word	0x464e495b
+    6564:	20205d4f 	.word	0x20205d4f
+    6568:	25282020 	.word	0x25282020
+    656c:	34253a73 	.word	0x34253a73
+    6570:	203a2964 	.word	0x203a2964
+    6574:	61647075 	.word	0x61647075
+    6578:	676e6974 	.word	0x676e6974
+    657c:	63657220 	.word	0x63657220
+    6580:	6964726f 	.word	0x6964726f
+    6584:	7220676e 	.word	0x7220676e
+    6588:	6f696765 	.word	0x6f696765
+    658c:	000a736e 	.word	0x000a736e
+    6590:	464e495b 	.word	0x464e495b
+    6594:	20205d4f 	.word	0x20205d4f
+    6598:	25282020 	.word	0x25282020
+    659c:	34253a73 	.word	0x34253a73
+    65a0:	203a2964 	.word	0x203a2964
+    65a4:	72617473 	.word	0x72617473
+    65a8:	676e6974 	.word	0x676e6974
+    65ac:	72657620 	.word	0x72657620
+    65b0:	20786574 	.word	0x20786574
+    65b4:	74736574 	.word	0x74736574
+    65b8:	00000a0a 	.word	0x00000a0a
+    65bc:	464e495b 	.word	0x464e495b
+    65c0:	20205d4f 	.word	0x20205d4f
+    65c4:	25282020 	.word	0x25282020
+    65c8:	34253a73 	.word	0x34253a73
+    65cc:	203a2964 	.word	0x203a2964
+    65d0:	6c696166 	.word	0x6c696166
+    65d4:	74206465 	.word	0x74206465
+    65d8:	6572206f 	.word	0x6572206f
+    65dc:	74206461 	.word	0x74206461
+    65e0:	64206568 	.word	0x64206568
+    65e4:	20617461 	.word	0x20617461
+    65e8:	63657073 	.word	0x63657073
+    65ec:	61656820 	.word	0x61656820
+    65f0:	0a726564 	.word	0x0a726564
+    65f4:	00000000 	.word	0x00000000
+    65f8:	464e495b 	.word	0x464e495b
+    65fc:	20205d4f 	.word	0x20205d4f
+    6600:	25282020 	.word	0x25282020
+    6604:	34253a73 	.word	0x34253a73
+    6608:	203a2964 	.word	0x203a2964
+    660c:	626d756e 	.word	0x626d756e
+    6610:	6b207265 	.word	0x6b207265
+    6614:	0a737965 	.word	0x0a737965
+    6618:	00000000 	.word	0x00000000
+    661c:	464e495b 	.word	0x464e495b
+    6620:	20205d4f 	.word	0x20205d4f
+    6624:	25282020 	.word	0x25282020
+    6628:	34253a73 	.word	0x34253a73
+    662c:	203a2964 	.word	0x203a2964
+    6630:	6b20796d 	.word	0x6b20796d
+    6634:	69207965 	.word	0x69207965
+    6638:	64252073 	.word	0x64252073
+    663c:	00000a0a 	.word	0x00000a0a
+    6640:	5252455b 	.word	0x5252455b
+    6644:	205d524f 	.word	0x205d524f
+    6648:	25282020 	.word	0x25282020
+    664c:	34253a73 	.word	0x34253a73
+    6650:	203a2964 	.word	0x203a2964
+    6654:	61656c70 	.word	0x61656c70
+    6658:	66206573 	.word	0x66206573
+    665c:	74207869 	.word	0x74207869
+    6660:	61206568 	.word	0x61206568
+    6664:	696c7070 	.word	0x696c7070
+    6668:	69746163 	.word	0x69746163
+    666c:	66206e6f 	.word	0x66206e6f
+    6670:	69726261 	.word	0x69726261
+    6674:	6e612063 	.word	0x6e612063
+    6678:	72742064 	.word	0x72742064
+    667c:	67612079 	.word	0x67612079
+    6680:	0a6e6961 	.word	0x0a6e6961
+    6684:	0000000a 	.word	0x0000000a
+    6688:	464e495b 	.word	0x464e495b
+    668c:	20205d4f 	.word	0x20205d4f
+    6690:	25282020 	.word	0x25282020
+    6694:	34253a73 	.word	0x34253a73
+    6698:	203a2964 	.word	0x203a2964
+    669c:	6920796d 	.word	0x6920796d
+    66a0:	6974696e 	.word	0x6974696e
+    66a4:	73206c61 	.word	0x73206c61
+    66a8:	65746174 	.word	0x65746174
+    66ac:	20736920 	.word	0x20736920
+    66b0:	0a0a6425 	.word	0x0a0a6425
+    66b4:	00000000 	.word	0x00000000
+    66b8:	464e495b 	.word	0x464e495b
+    66bc:	20205d4f 	.word	0x20205d4f
+    66c0:	25282020 	.word	0x25282020
+    66c4:	34253a73 	.word	0x34253a73
+    66c8:	203a2964 	.word	0x203a2964
+    66cc:	6f636552 	.word	0x6f636552
+    66d0:	6e696472 	.word	0x6e696472
+    66d4:	6c662067 	.word	0x6c662067
+    66d8:	20736761 	.word	0x20736761
+    66dc:	7830203d 	.word	0x7830203d
+    66e0:	78383025 	.word	0x78383025
+    66e4:	0000000a 	.word	0x0000000a
+    66e8:	464e495b 	.word	0x464e495b
+    66ec:	20205d4f 	.word	0x20205d4f
+    66f0:	25282020 	.word	0x25282020
+    66f4:	34253a73 	.word	0x34253a73
+    66f8:	203a2964 	.word	0x203a2964
+    66fc:	74746573 	.word	0x74746573
+    6700:	20676e69 	.word	0x20676e69
+    6704:	656d6974 	.word	0x656d6974
+    6708:	6f742072 	.word	0x6f742072
+    670c:	65786520 	.word	0x65786520
+    6710:	65747563 	.word	0x65747563
+    6714:	65766520 	.word	0x65766520
+    6718:	25207972 	.word	0x25207972
+    671c:	696d2064 	.word	0x696d2064
+    6720:	736f7263 	.word	0x736f7263
+    6724:	6e6f6365 	.word	0x6e6f6365
+    6728:	000a7364 	.word	0x000a7364
+    672c:	464e495b 	.word	0x464e495b
+    6730:	20205d4f 	.word	0x20205d4f
+    6734:	25282020 	.word	0x25282020
+    6738:	34253a73 	.word	0x34253a73
+    673c:	203a2964 	.word	0x203a2964
+    6740:	72617453 	.word	0x72617453
+    6744:	676e6974 	.word	0x676e6974
+    6748:	00000a0a 	.word	0x00000a0a
 
-00006748 <build_name>:
-    6748:	74726576 00007865                       vertex..
+0000674c <build_name>:
+    674c:	726f6f63 616e6964 00726f74              coordinator.
 
-00006750 <build_date>:
-    6750:	5a7310b8 2f637273 61746164 6570735f     ..sZsrc/data_spe
-    6760:	69666963 69746163 632e6e6f 4e495b00     cification.c.[IN
-    6770:	205d4f46 28202020 253a7325 3a296434     FO]    (%s:%4d):
-    6780:	52445320 64204d41 20617461 69676562      SDRAM data begi
-    6790:	6120736e 64612074 73657264 25203a73     ns at address: %
-    67a0:	0a783830 52455b00 5d524f52 28202020     08x..[ERROR]   (
-    67b0:	253a7325 3a296434 67614d20 6e206369     %s:%4d): Magic n
-    67c0:	65626d75 73692072 636e6920 6572726f     umber is incorre
-    67d0:	203a7463 78383025 455b000a 524f5252     ct: %08x..[ERROR
-    67e0:	2020205d 3a732528 29643425 6556203a     ]   (%s:%4d): Ve
-    67f0:	6f697372 756e206e 7265626d 20736920     rsion number is 
-    6800:	6f636e69 63657272 25203a74 0a783830     incorrect: %08x.
-    6810:	4e495b00 205d4f46 28202020 253a7325     .[INFO]    (%s:%
-    6820:	3a296434 67616d20 3d206369 38302520     4d): magic = %08
-    6830:	76202c78 69737265 3d206e6f 2e642520     x, version = %d.
-    6840:	000a6425 2f637273 756d6973 6974616c     %d..src/simulati
-    6850:	632e6e6f 4e495b00 205d4f46 28202020     on.c.[INFO]    (
-    6860:	253a7325 3a296434 61745320 6e697472     %s:%4d): Startin
-    6870:	61622067 20636973 766f7270 6e616e65     g basic provenan
-    6880:	67206563 65687461 676e6972 495b000a     ce gathering..[I
-    6890:	5d4f464e 20202020 3a732528 29643425     NFO]    (%s:%4d)
-    68a0:	7572203a 6e696e6e 746f2067 20726568     : running other 
-    68b0:	766f7270 6e616e65 67206563 65687461     provenance gathe
-    68c0:	676e6972 495b000a 5d4f464e 20202020     ring..[INFO]    
-    68d0:	3a732528 29643425 6552203a 76696563     (%s:%4d): Receiv
-    68e0:	65206465 20746978 6e676973 202e6c61     ed exit signal. 
-    68f0:	676f7250 206d6172 706d6f63 6574656c     Program complete
-    6900:	5b000a2e 4f464e49 2020205d 73252820     ...[INFO]    (%s
-    6910:	6434253a 43203a29 696c6c61 7020676e     :%4d): Calling p
-    6920:	652d6572 20746978 636e7566 6e6f6974     re-exit function
-    6930:	495b000a 5d4f464e 20202020 3a732528     ..[INFO]    (%s:
-    6940:	29643425 7845203a 6e697469 5b000a67     %4d): Exiting..[
-    6950:	4f464e49 2020205d 73252820 6434253a     INFO]    (%s:%4d
-    6960:	53203a29 69747465 7420676e 72206568     ): Setting the r
-    6970:	69746e75 6f20656d 68742066 6d207369     untime of this m
-    6980:	6c65646f 206f7420 000a6425 464e495b     odel to %d..[INF
-    6990:	20205d4f 25282020 34253a73 203a2964     O]    (%s:%4d): 
-    69a0:	74746553 20676e69 20656874 67616c66     Setting the flag
-    69b0:	20666f20 69666e69 6574696e 6e757220      of infinite run
-    69c0:	726f6620 69687420 6f6d2073 206c6564      for this model 
-    69d0:	25206f74 5b000a64 4f464e49 2020205d     to %d..[INFO]   
-    69e0:	73252820 6434253a 43203a29 696c6c61      (%s:%4d): Calli
-    69f0:	7020676e 722d6572 6d757365 75662065     ng pre-resume fu
-    6a00:	6974636e 000a6e6f 464e495b 20205d4f     nction..[INFO]  
-    6a10:	25282020 34253a73 203a2964 75736552       (%s:%4d): Resu
-    6a20:	676e696d 495b000a 5d4f464e 20202020     ming..[INFO]    
-    6a30:	3a732528 29643425 6f46203a 64656372     (%s:%4d): Forced
-    6a40:	6f727020 616e6576 2065636e 68746167      provenance gath
-    6a50:	6e697265 5b000a67 4f525245 20205d52     ering..[ERROR]  
-    6a60:	73252820 6434253a 72203a29 69656365      (%s:%4d): recei
-    6a70:	20646576 6b636170 77207465 20687469     ved packet with 
-    6a80:	6e6b6e75 206e776f 6d6d6f63 20646e61     unknown command 
-    6a90:	65646f63 0a642520 52455b00 5d524f52     code %d..[ERROR]
-    6aa0:	28202020 253a7325 3a296434 6e614320        (%s:%4d): Can
-    6ab0:	20746f6e 6f6c6c61 65746163 70647320     not allocate sdp
-    6ac0:	6c616320 6361626c 6e6f206b 726f7020      callback on por
-    6ad0:	64252074 20736120 20737469 65726c61     t %d as its alre
-    6ae0:	20796461 6e656562 6c6c6120 7461636f     ady been allocat
-    6af0:	0a2e6465 52455b00 5d524f52 28202020     ed...[ERROR]   (
-    6b00:	253a7325 3a296434 6e614320 20746f6e     %s:%4d): Cannot 
-    6b10:	646e6168 7420656c 76206761 65756c61     handle tag value
-    6b20:	6f626120 25206576 70202c64 7361656c      above %d, pleas
-    6b30:	65722065 65637564 65687420 67617420     e reduce the tag
-    6b40:	6c617620 61206575 726f6363 676e6964      value according
-    6b50:	0a2e796c 52455b00 5d524f52 28202020     ly...[ERROR]   (
-    6b60:	253a7325 3a296434 6e614320 20746f6e     %s:%4d): Cannot 
-    6b70:	6f6c6c61 65746163 616d6420 61727420     allocate dma tra
-    6b80:	6566736e 61632072 61626c6c 6f206b63     nsfer callback o
-    6b90:	6174206e 64252067 20736120 20737469     n tag %d as its 
-    6ba0:	65726c61 20796461 6e656562 6c6c6120     already been all
-    6bb0:	7461636f 0a2e6465 52455b00 5d524f52     ocated...[ERROR]
-    6bc0:	28202020 253a7325 3a296434 656e5520        (%s:%4d): Une
-    6bd0:	63657078 20646574 6967616d 756e2063     xpected magic nu
-    6be0:	7265626d 25783020 20783830 74736e69     mber 0x%08x inst
-    6bf0:	20646165 3020666f 38302578 74612078     ead of 0x%08x at
-    6c00:	25783020 0a783830 52455b00 5d524f52      0x%08x..[ERROR]
-    6c10:	28202020 253a7325 3a296434 65685420        (%s:%4d): The
-    6c20:	50445320 6c616320 6361626c 7270206b      SDP callback pr
-    6c30:	69726f69 73207974 6c756f68 65622064     iority should be
-    6c40:	74657320 206f7420 756e2061 7265626d      set to a number
-    6c50:	65726720 72657461 61687420 726f206e      greater than or
-    6c60:	75716520 74206c61 312d206f 4920202e      equal to -1.  I
-    6c70:	73692074 72756320 746e6572 7320796c     t is currently s
-    6c80:	74207465 6425206f 7273000a 65722f63     et to %d..src/re
-    6c90:	64726f63 2e676e69 495b0063 5d4f464e     cording.c.[INFO]
-    6ca0:	20202020 3a732528 29643425 4157203a         (%s:%4d): WA
-    6cb0:	4e494e52 72203a47 726f6365 676e6964     RNING: recording
-    6cc0:	61686320 6c656e6e 20752520 2074756f      channel %u out 
-    6cd0:	7320666f 65636170 495b000a 5d4f464e     of space..[INFO]
-    6ce0:	20202020 3a732528 29643425 4609203a         (%s:%4d): .F
-    6cf0:	6c616e69 6e697369 68632067 656e6e61     inalising channe
-    6d00:	7525206c 64202d20 70706f72 69206465     l %u - dropped i
-    6d10:	726f666e 6974616d 77206e6f 656c6968     nformation while
-    6d20:	66667562 6e697265 202d2067 74617473     buffering - stat
-    6d30:	6e692065 73206f66 65726f74 6e692064     e info stored in
-    6d40:	52445320 000a4d41 464e495b 20205d4f      SDRAM..[INFO]  
-    6d50:	25282020 34253a73 203a2964 6e694609       (%s:%4d): .Fin
-    6d60:	73696c61 20676e69 6e616863 206c656e     alising channel 
-    6d70:	2d207525 61747320 69206574 206f666e     %u - state info 
-    6d80:	726f7473 69206465 4453206e 0a4d4152     stored in SDRAM.
-    6d90:	4e495b00 205d4f46 28202020 253a7325     .[INFO]    (%s:%
-    6da0:	3a296434 6f6c6320 20646573 6e616863     4d): closed chan
-    6db0:	206c656e 0a2e7525 4e495b00 205d4f46     nel %u...[INFO] 
-    6dc0:	28202020 253a7325 3a296434 63655220        (%s:%4d): Rec
-    6dd0:	6964726f 6320676e 6e6e6168 25206c65     ording channel %
-    6de0:	6f632075 6769666e 64657275 206f7420     u configured to 
-    6df0:	20657375 62207525 20657479 6f6d656d     use %u byte memo
-    6e00:	62207972 6b636f6c 61747320 6e697472     ry block startin
-    6e10:	74612067 25783020 0a783830 4e495b00     g at 0x%08x..[IN
-    6e20:	205d4f46 28202020 253a7325 3a296434     FO]    (%s:%4d):
-    6e30:	63655220 6964726f 6320676e 6e6e6168      Recording chann
-    6e40:	25206c65 656c2075 75207466 696e696e     el %u left unini
-    6e50:	6c616974 64657369 495b000a 5d4f464e     tialised..[INFO]
-    6e60:	20202020 3a732528 29643425 6552203a         (%s:%4d): Re
-    6e70:	64726f63 20676e69 72206425 6f696765     cording %d regio
-    6e80:	202c736e 6e697375 756f2067 74757074     ns, using output
-    6e90:	67617420 2c642520 7a697320 65622065      tag %d, size be
-    6ea0:	65726f66 69727420 72656767 2c642520     fore trigger %d,
-    6eb0:	6d697420 65622065 65657774 7274206e      time between tr
-    6ec0:	65676769 25207372 5b000a64 4f525245     iggers %d..[ERRO
-    6ed0:	20205d52 73252820 6434253a 4e203a29     R]   (%s:%4d): N
-    6ee0:	6520746f 67756f6e 70732068 20656361     ot enough space 
-    6ef0:	61206f74 636f6c6c 20657461 6f636572     to allocate reco
-    6f00:	6e696472 64612067 73657264 0a736573     rding addresses.
-    6f10:	52455b00 5d524f52 28202020 253a7325     .[ERROR]   (%s:%
-    6f20:	3a296434 746f4e20 6f6e6520 20686775     4d): Not enough 
-    6f30:	63617073 6f742065 6c6c6120 7461636f     space to allocat
-    6f40:	65722065 6e6f6967 7a697320 000a7365     e region sizes..
-    6f50:	5252455b 205d524f 25282020 34253a73     [ERROR]   (%s:%4
-    6f60:	203a2964 6c756f43 6f6e2064 6c612074     d): Could not al
-    6f70:	61636f6c 72206574 726f6365 676e6964     locate recording
-    6f80:	67657220 206e6f69 6f207525 75252066      region %u of %u
-    6f90:	74796220 000a7365 5252455b 205d524f      bytes..[ERROR] 
-    6fa0:	25282020 34253a73 203a2964 20746f4e       (%s:%4d): Not 
-    6fb0:	756f6e65 73206867 65636170 206f7420     enough space to 
-    6fc0:	61657263 72206574 726f6365 676e6964     create recording
-    6fd0:	61686320 6c656e6e 5b000a73 4f525245      channels..[ERRO
-    6fe0:	20205d52 73252820 6434253a 55203a29     R]   (%s:%4d): U
-    6ff0:	6f6e6b6e 63206e77 6e6e6168 73206c65     nknown channel s
-    7000:	65746174 63202d20 6e6e6168 203a6c65     tate - channel: 
-    7010:	202c6425 72617473 6f702074 65746e69     %d, start pointe
-    7020:	25203a72 65202c64 7020646e 746e696f     r: %d, end point
-    7030:	203a7265 202c6425 64616572 696f705f     er: %d, read_poi
-    7040:	7265746e 6425203a 7277202c 5f657469     nter: %d, write_
-    7050:	6e696f70 3a726574 2c642520 73616c20     pointer: %d, las
-    7060:	706f2074 74617265 3d6e6f69 4145523d     t operation==REA
-    7070:	25203a44 00000a64 2f637273 63726963     D: %d...src/circ
-    7080:	72616c75 6675625f 2e726566 00000063     ular_buffer.c...
-    7090:	5241575b 474e494e 2528205d 34253a73     [WARNING] (%s:%4
-    70a0:	203a2964 75716552 65747365 69732064     d): Requested si
-    70b0:	6f20657a 75252066 73617720 756f7220     ze of %u was rou
-    70c0:	6465646e 20707520 25206f74 00000a75     nded up to %u...
-    70d0:	5252455b 205d524f 25282020 34253a73     [ERROR]   (%s:%4
-    70e0:	203a2964 6e6e6143 6120746f 636f6c6c     d): Cannot alloc
-    70f0:	20657461 63617073 6f662065 75622072     ate space for bu
-    7100:	72656666 72747320 75746375 000a6572     ffer structure..
-    7110:	5252455b 205d524f 25282020 34253a73     [ERROR]   (%s:%4
-    7120:	203a2964 6e6e6143 6120746f 636f6c6c     d): Cannot alloc
-    7130:	20657461 63617073 6f662065 75622072     ate space for bu
-    7140:	72656666 206e6920 63726963 72616c75     ffer in circular
-    7150:	66756220 0a726566 00000000 0000005b      buffer.....[...
-    7160:	00007525 0000202c 53000a5d 2f4b5241     %u.., ..]..SARK/
-    7170:	4e697053 656b614e 2e330072 00312e31     SpiNNaker.3.1.1.
+00006758 <build_date>:
+    6758:	5a7310ab 2f637273 61746164 6570735f     ..sZsrc/data_spe
+    6768:	69666963 69746163 632e6e6f 4e495b00     cification.c.[IN
+    6778:	205d4f46 28202020 253a7325 3a296434     FO]    (%s:%4d):
+    6788:	52445320 64204d41 20617461 69676562      SDRAM data begi
+    6798:	6120736e 64612074 73657264 25203a73     ns at address: %
+    67a8:	0a783830 52455b00 5d524f52 28202020     08x..[ERROR]   (
+    67b8:	253a7325 3a296434 67614d20 6e206369     %s:%4d): Magic n
+    67c8:	65626d75 73692072 636e6920 6572726f     umber is incorre
+    67d8:	203a7463 78383025 455b000a 524f5252     ct: %08x..[ERROR
+    67e8:	2020205d 3a732528 29643425 6556203a     ]   (%s:%4d): Ve
+    67f8:	6f697372 756e206e 7265626d 20736920     rsion number is 
+    6808:	6f636e69 63657272 25203a74 0a783830     incorrect: %08x.
+    6818:	4e495b00 205d4f46 28202020 253a7325     .[INFO]    (%s:%
+    6828:	3a296434 67616d20 3d206369 38302520     4d): magic = %08
+    6838:	76202c78 69737265 3d206e6f 2e642520     x, version = %d.
+    6848:	000a6425 2f637273 756d6973 6974616c     %d..src/simulati
+    6858:	632e6e6f 4e495b00 205d4f46 28202020     on.c.[INFO]    (
+    6868:	253a7325 3a296434 61745320 6e697472     %s:%4d): Startin
+    6878:	61622067 20636973 766f7270 6e616e65     g basic provenan
+    6888:	67206563 65687461 676e6972 495b000a     ce gathering..[I
+    6898:	5d4f464e 20202020 3a732528 29643425     NFO]    (%s:%4d)
+    68a8:	7572203a 6e696e6e 746f2067 20726568     : running other 
+    68b8:	766f7270 6e616e65 67206563 65687461     provenance gathe
+    68c8:	676e6972 495b000a 5d4f464e 20202020     ring..[INFO]    
+    68d8:	3a732528 29643425 6552203a 76696563     (%s:%4d): Receiv
+    68e8:	65206465 20746978 6e676973 202e6c61     ed exit signal. 
+    68f8:	676f7250 206d6172 706d6f63 6574656c     Program complete
+    6908:	5b000a2e 4f464e49 2020205d 73252820     ...[INFO]    (%s
+    6918:	6434253a 43203a29 696c6c61 7020676e     :%4d): Calling p
+    6928:	652d6572 20746978 636e7566 6e6f6974     re-exit function
+    6938:	495b000a 5d4f464e 20202020 3a732528     ..[INFO]    (%s:
+    6948:	29643425 7845203a 6e697469 5b000a67     %4d): Exiting..[
+    6958:	4f464e49 2020205d 73252820 6434253a     INFO]    (%s:%4d
+    6968:	53203a29 69747465 7420676e 72206568     ): Setting the r
+    6978:	69746e75 6f20656d 68742066 6d207369     untime of this m
+    6988:	6c65646f 206f7420 000a6425 464e495b     odel to %d..[INF
+    6998:	20205d4f 25282020 34253a73 203a2964     O]    (%s:%4d): 
+    69a8:	74746553 20676e69 20656874 67616c66     Setting the flag
+    69b8:	20666f20 69666e69 6574696e 6e757220      of infinite run
+    69c8:	726f6620 69687420 6f6d2073 206c6564      for this model 
+    69d8:	25206f74 5b000a64 4f464e49 2020205d     to %d..[INFO]   
+    69e8:	73252820 6434253a 43203a29 696c6c61      (%s:%4d): Calli
+    69f8:	7020676e 722d6572 6d757365 75662065     ng pre-resume fu
+    6a08:	6974636e 000a6e6f 464e495b 20205d4f     nction..[INFO]  
+    6a18:	25282020 34253a73 203a2964 75736552       (%s:%4d): Resu
+    6a28:	676e696d 495b000a 5d4f464e 20202020     ming..[INFO]    
+    6a38:	3a732528 29643425 6f46203a 64656372     (%s:%4d): Forced
+    6a48:	6f727020 616e6576 2065636e 68746167      provenance gath
+    6a58:	6e697265 5b000a67 4f525245 20205d52     ering..[ERROR]  
+    6a68:	73252820 6434253a 72203a29 69656365      (%s:%4d): recei
+    6a78:	20646576 6b636170 77207465 20687469     ved packet with 
+    6a88:	6e6b6e75 206e776f 6d6d6f63 20646e61     unknown command 
+    6a98:	65646f63 0a642520 52455b00 5d524f52     code %d..[ERROR]
+    6aa8:	28202020 253a7325 3a296434 6e614320        (%s:%4d): Can
+    6ab8:	20746f6e 6f6c6c61 65746163 70647320     not allocate sdp
+    6ac8:	6c616320 6361626c 6e6f206b 726f7020      callback on por
+    6ad8:	64252074 20736120 20737469 65726c61     t %d as its alre
+    6ae8:	20796461 6e656562 6c6c6120 7461636f     ady been allocat
+    6af8:	0a2e6465 52455b00 5d524f52 28202020     ed...[ERROR]   (
+    6b08:	253a7325 3a296434 6e614320 20746f6e     %s:%4d): Cannot 
+    6b18:	646e6168 7420656c 76206761 65756c61     handle tag value
+    6b28:	6f626120 25206576 70202c64 7361656c      above %d, pleas
+    6b38:	65722065 65637564 65687420 67617420     e reduce the tag
+    6b48:	6c617620 61206575 726f6363 676e6964      value according
+    6b58:	0a2e796c 52455b00 5d524f52 28202020     ly...[ERROR]   (
+    6b68:	253a7325 3a296434 6e614320 20746f6e     %s:%4d): Cannot 
+    6b78:	6f6c6c61 65746163 616d6420 61727420     allocate dma tra
+    6b88:	6566736e 61632072 61626c6c 6f206b63     nsfer callback o
+    6b98:	6174206e 64252067 20736120 20737469     n tag %d as its 
+    6ba8:	65726c61 20796461 6e656562 6c6c6120     already been all
+    6bb8:	7461636f 0a2e6465 52455b00 5d524f52     ocated...[ERROR]
+    6bc8:	28202020 253a7325 3a296434 656e5520        (%s:%4d): Une
+    6bd8:	63657078 20646574 6967616d 756e2063     xpected magic nu
+    6be8:	7265626d 25783020 20783830 74736e69     mber 0x%08x inst
+    6bf8:	20646165 3020666f 38302578 74612078     ead of 0x%08x at
+    6c08:	25783020 0a783830 52455b00 5d524f52      0x%08x..[ERROR]
+    6c18:	28202020 253a7325 3a296434 65685420        (%s:%4d): The
+    6c28:	50445320 6c616320 6361626c 7270206b      SDP callback pr
+    6c38:	69726f69 73207974 6c756f68 65622064     iority should be
+    6c48:	74657320 206f7420 756e2061 7265626d      set to a number
+    6c58:	65726720 72657461 61687420 726f206e      greater than or
+    6c68:	75716520 74206c61 312d206f 4920202e      equal to -1.  I
+    6c78:	73692074 72756320 746e6572 7320796c     t is currently s
+    6c88:	74207465 6425206f 7273000a 65722f63     et to %d..src/re
+    6c98:	64726f63 2e676e69 495b0063 5d4f464e     cording.c.[INFO]
+    6ca8:	20202020 3a732528 29643425 4157203a         (%s:%4d): WA
+    6cb8:	4e494e52 72203a47 726f6365 676e6964     RNING: recording
+    6cc8:	61686320 6c656e6e 20752520 2074756f      channel %u out 
+    6cd8:	7320666f 65636170 495b000a 5d4f464e     of space..[INFO]
+    6ce8:	20202020 3a732528 29643425 4609203a         (%s:%4d): .F
+    6cf8:	6c616e69 6e697369 68632067 656e6e61     inalising channe
+    6d08:	7525206c 64202d20 70706f72 69206465     l %u - dropped i
+    6d18:	726f666e 6974616d 77206e6f 656c6968     nformation while
+    6d28:	66667562 6e697265 202d2067 74617473     buffering - stat
+    6d38:	6e692065 73206f66 65726f74 6e692064     e info stored in
+    6d48:	52445320 000a4d41 464e495b 20205d4f      SDRAM..[INFO]  
+    6d58:	25282020 34253a73 203a2964 6e694609       (%s:%4d): .Fin
+    6d68:	73696c61 20676e69 6e616863 206c656e     alising channel 
+    6d78:	2d207525 61747320 69206574 206f666e     %u - state info 
+    6d88:	726f7473 69206465 4453206e 0a4d4152     stored in SDRAM.
+    6d98:	4e495b00 205d4f46 28202020 253a7325     .[INFO]    (%s:%
+    6da8:	3a296434 6f6c6320 20646573 6e616863     4d): closed chan
+    6db8:	206c656e 0a2e7525 4e495b00 205d4f46     nel %u...[INFO] 
+    6dc8:	28202020 253a7325 3a296434 63655220        (%s:%4d): Rec
+    6dd8:	6964726f 6320676e 6e6e6168 25206c65     ording channel %
+    6de8:	6f632075 6769666e 64657275 206f7420     u configured to 
+    6df8:	20657375 62207525 20657479 6f6d656d     use %u byte memo
+    6e08:	62207972 6b636f6c 61747320 6e697472     ry block startin
+    6e18:	74612067 25783020 0a783830 4e495b00     g at 0x%08x..[IN
+    6e28:	205d4f46 28202020 253a7325 3a296434     FO]    (%s:%4d):
+    6e38:	63655220 6964726f 6320676e 6e6e6168      Recording chann
+    6e48:	25206c65 656c2075 75207466 696e696e     el %u left unini
+    6e58:	6c616974 64657369 495b000a 5d4f464e     tialised..[INFO]
+    6e68:	20202020 3a732528 29643425 6552203a         (%s:%4d): Re
+    6e78:	64726f63 20676e69 72206425 6f696765     cording %d regio
+    6e88:	202c736e 6e697375 756f2067 74757074     ns, using output
+    6e98:	67617420 2c642520 7a697320 65622065      tag %d, size be
+    6ea8:	65726f66 69727420 72656767 2c642520     fore trigger %d,
+    6eb8:	6d697420 65622065 65657774 7274206e      time between tr
+    6ec8:	65676769 25207372 5b000a64 4f525245     iggers %d..[ERRO
+    6ed8:	20205d52 73252820 6434253a 4e203a29     R]   (%s:%4d): N
+    6ee8:	6520746f 67756f6e 70732068 20656361     ot enough space 
+    6ef8:	61206f74 636f6c6c 20657461 6f636572     to allocate reco
+    6f08:	6e696472 64612067 73657264 0a736573     rding addresses.
+    6f18:	52455b00 5d524f52 28202020 253a7325     .[ERROR]   (%s:%
+    6f28:	3a296434 746f4e20 6f6e6520 20686775     4d): Not enough 
+    6f38:	63617073 6f742065 6c6c6120 7461636f     space to allocat
+    6f48:	65722065 6e6f6967 7a697320 000a7365     e region sizes..
+    6f58:	5252455b 205d524f 25282020 34253a73     [ERROR]   (%s:%4
+    6f68:	203a2964 6c756f43 6f6e2064 6c612074     d): Could not al
+    6f78:	61636f6c 72206574 726f6365 676e6964     locate recording
+    6f88:	67657220 206e6f69 6f207525 75252066      region %u of %u
+    6f98:	74796220 000a7365 5252455b 205d524f      bytes..[ERROR] 
+    6fa8:	25282020 34253a73 203a2964 20746f4e       (%s:%4d): Not 
+    6fb8:	756f6e65 73206867 65636170 206f7420     enough space to 
+    6fc8:	61657263 72206574 726f6365 676e6964     create recording
+    6fd8:	61686320 6c656e6e 5b000a73 4f525245      channels..[ERRO
+    6fe8:	20205d52 73252820 6434253a 55203a29     R]   (%s:%4d): U
+    6ff8:	6f6e6b6e 63206e77 6e6e6168 73206c65     nknown channel s
+    7008:	65746174 63202d20 6e6e6168 203a6c65     tate - channel: 
+    7018:	202c6425 72617473 6f702074 65746e69     %d, start pointe
+    7028:	25203a72 65202c64 7020646e 746e696f     r: %d, end point
+    7038:	203a7265 202c6425 64616572 696f705f     er: %d, read_poi
+    7048:	7265746e 6425203a 7277202c 5f657469     nter: %d, write_
+    7058:	6e696f70 3a726574 2c642520 73616c20     pointer: %d, las
+    7068:	706f2074 74617265 3d6e6f69 4145523d     t operation==REA
+    7078:	25203a44 00000a64 2f637273 63726963     D: %d...src/circ
+    7088:	72616c75 6675625f 2e726566 00000063     ular_buffer.c...
+    7098:	5241575b 474e494e 2528205d 34253a73     [WARNING] (%s:%4
+    70a8:	203a2964 75716552 65747365 69732064     d): Requested si
+    70b8:	6f20657a 75252066 73617720 756f7220     ze of %u was rou
+    70c8:	6465646e 20707520 25206f74 00000a75     nded up to %u...
+    70d8:	5252455b 205d524f 25282020 34253a73     [ERROR]   (%s:%4
+    70e8:	203a2964 6e6e6143 6120746f 636f6c6c     d): Cannot alloc
+    70f8:	20657461 63617073 6f662065 75622072     ate space for bu
+    7108:	72656666 72747320 75746375 000a6572     ffer structure..
+    7118:	5252455b 205d524f 25282020 34253a73     [ERROR]   (%s:%4
+    7128:	203a2964 6e6e6143 6120746f 636f6c6c     d): Cannot alloc
+    7138:	20657461 63617073 6f662065 75622072     ate space for bu
+    7148:	72656666 206e6920 63726963 72616c75     ffer in circular
+    7158:	66756220 0a726566 00000000 0000005b      buffer.....[...
+    7168:	00007525 0000202c 53000a5d 2f4b5241     %u.., ..]..SARK/
+    7178:	4e697053 656b614e 2e330072 00312e31     SpiNNaker.3.1.1.
 
-00007180 <hex>:
-    7180:	33323130 37363534 62613938 66656463     0123456789abcdef
-    7190:	5b090900 5f697061 75626564 52205d67     ...[api_debug] R
-    71a0:	6d205254 20202063 61702020 74656b63     TR mc     packet
-    71b0:	25203a73 09000a64 70615b09 65645f69     s: %d....[api_de
-    71c0:	5d677562 52545220 64706420 20636d20     bug] RTR dpd mc 
-    71d0:	6b636170 3a737465 0a642520 5b090900     packets: %d....[
-    71e0:	5f697061 75626564 49205d67 74205253     api_debug] ISR t
-    71f0:	776f7268 6170206e 74656b63 25203a73     hrown packets: %
-    7200:	09000a64 70615b09 65645f69 5d677562     d....[api_debug]
-    7210:	52534920 72687420 206e776f 70205246      ISR thrown FR p
-    7220:	656b6361 203a7374 000a6425 615b0909     ackets: %d....[a
-    7230:	645f6970 67756265 4d44205d 75622041     pi_debug] DMA bu
-    7240:	73747372 2520203a 09000a64 70615b09     rsts:  %d....[ap
-    7250:	61775f69 205d6e72 6e726177 3a676e69     i_warn] warning:
-    7260:	73617420 7571206b 20657565 6c6c7566      task queue full
-    7270:	75252820 09000a29 70615b09 61775f69      (%u)....[api_wa
-    7280:	205d6e72 6e726177 3a676e69 414d4420     rn] warning: DMA
-    7290:	65757120 66206575 206c6c75 29752528      queue full (%u)
-    72a0:	0909000a 6970615b 7261775f 77205d6e     ....[api_warn] w
-    72b0:	696e7261 203a676e 6b636170 71207465     arning: packet q
-    72c0:	65756575 6c756620 2528206c 000a2975     ueue full (%u)..
-    72d0:	33323130 37363534 62613938 66656463     0123456789abcdef
-    72e0:	6a696867 6e6d6c6b 7271706f 76757473     ghijklmnopqrstuv
-    72f0:	7a797877 00000000                       wxyz....
+00007188 <hex>:
+    7188:	33323130 37363534 62613938 66656463     0123456789abcdef
+    7198:	5b090900 5f697061 75626564 52205d67     ...[api_debug] R
+    71a8:	6d205254 20202063 61702020 74656b63     TR mc     packet
+    71b8:	25203a73 09000a64 70615b09 65645f69     s: %d....[api_de
+    71c8:	5d677562 52545220 64706420 20636d20     bug] RTR dpd mc 
+    71d8:	6b636170 3a737465 0a642520 5b090900     packets: %d....[
+    71e8:	5f697061 75626564 49205d67 74205253     api_debug] ISR t
+    71f8:	776f7268 6170206e 74656b63 25203a73     hrown packets: %
+    7208:	09000a64 70615b09 65645f69 5d677562     d....[api_debug]
+    7218:	52534920 72687420 206e776f 70205246      ISR thrown FR p
+    7228:	656b6361 203a7374 000a6425 615b0909     ackets: %d....[a
+    7238:	645f6970 67756265 4d44205d 75622041     pi_debug] DMA bu
+    7248:	73747372 2520203a 09000a64 70615b09     rsts:  %d....[ap
+    7258:	61775f69 205d6e72 6e726177 3a676e69     i_warn] warning:
+    7268:	73617420 7571206b 20657565 6c6c7566      task queue full
+    7278:	75252820 09000a29 70615b09 61775f69      (%u)....[api_wa
+    7288:	205d6e72 6e726177 3a676e69 414d4420     rn] warning: DMA
+    7298:	65757120 66206575 206c6c75 29752528      queue full (%u)
+    72a8:	0909000a 6970615b 7261775f 77205d6e     ....[api_warn] w
+    72b8:	696e7261 203a676e 6b636170 71207465     arning: packet q
+    72c8:	65756575 6c756620 2528206c 000a2975     ueue full (%u)..
+    72d8:	33323130 37363534 62613938 66656463     0123456789abcdef
+    72e8:	6a696867 6e6d6c6b 7271706f 76757473     ghijklmnopqrstuv
+    72f8:	7a797877 00000000                       wxyz....

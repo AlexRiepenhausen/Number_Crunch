@@ -4,8 +4,11 @@ ifndef SPINN_DIRS
 endif
 
 APP = vertex
+#APP = coordinator
 BUILD_DIR = build/
 SOURCES = vertex.c
+#SOURCES = coordinator.c
+
 
 MAKEFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 CURRENT_DIR := $(dir $(MAKEFILE_PATH))

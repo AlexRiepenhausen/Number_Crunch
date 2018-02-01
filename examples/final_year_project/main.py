@@ -13,7 +13,7 @@ front_end.setup(
 total_number_of_cores = \
     front_end.get_number_of_available_cores_on_machine()
     
-getData = parser('../../resources/date.csv')    
+getData = parser('../../resources/test.csv')    
     
 data = getData.read_data()
 number_of_chips = 1
@@ -27,7 +27,7 @@ load_data_onto_vertices(data,
                         num_string_cols,
                         function_id)
 
-front_end.run(10000)
+front_end.run(3000)
 
 placements = front_end.placements()
 buffer_manager = front_end.buffer_manager()

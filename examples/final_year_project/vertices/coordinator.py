@@ -1,4 +1,3 @@
-
 from pacman.model.decorators import overrides
 from pacman.model.graphs.machine import MachineVertex
 from pacman.model.resources import CPUCyclesPerTickResource, DTCMResource
@@ -51,7 +50,17 @@ class Coordinator(
 
     CORE_APP_IDENTIFIER = 0xBEEF
 
-    def __init__(self, label, columns, rows, string_size, num_string_cols, entries, initiate, function_id, state, constraints=None):
+    def __init__(self, label, 
+                 columns, 
+                 rows, 
+                 string_size, 
+                 num_string_cols, 
+                 entries, 
+                 initiate, 
+                 function_id, 
+                 state, 
+                 constraints=None):
+        
         MachineVertex.__init__(self, label=label, constraints=constraints)
 
         config = globals_variables.get_simulator().config
@@ -75,7 +84,6 @@ class Coordinator(
         self.entries         = entries 
         self.initiate        = initiate
         self.function_id     = function_id
-
         '''
         allocate space for entries and 24 bytes for the 6 integers that make up the header information'''
         self._input_data_size  = (string_size * rows * num_string_cols) + \
@@ -101,7 +109,7 @@ class Coordinator(
 
     @overrides(AbstractHasAssociatedBinary.get_binary_file_name)
     def get_binary_file_name(self):
-        return "coordinator.aplx"
+        return "vertex.aplx"
 
     @overrides(AbstractHasAssociatedBinary.get_binary_start_type)
     def get_binary_start_type(self):
@@ -147,22 +155,6 @@ class Coordinator(
             
         # check for duplicates - there is only one edge at the moment for each vertex
         edges = list(machine_graph.get_edges_ending_at_vertex(self))
-        
-        ''' 
-        if len(set(edges)) != 2:
-            output = ""
-            for edge in edges:
-                output += edge.pre_subvertex.label + " : "
-                raise exceptions.ConfigurationException(
-                    "I've got duplicate edges. This is a error. The edges are "
-                    "connected to these vertices \n {}".format(output))
-
-        if len(edges) != 2:
-            raise exceptions.ConfigurationException(
-                 "I've not got the right number of connections. I have {} "
-                 "instead of 1".format(
-                 len(machine_graph.incoming_subedges_from_subvertex(self))))
-        '''
         
         for edge in edges:
             if edge.pre_vertex == self:
