@@ -4,9 +4,11 @@ import spinnaker_graph_front_end as front_end
 from utilities.parser import parser
 from data_input.build_vertices import load_data_onto_vertices
 from data_output.output_to_console import output_to_console
+from spinnman import model_binaries
 
+#put aplx file into: /home/mfbx3ard/.local/lib/python2.7/site-packages/spinnman/model_binaries
 front_end.setup(
-    n_chips_required=None, model_binary_folder=os.path.dirname(__file__))
+    n_chips_required=None, model_binary_folder=os.path.dirname(model_binaries.__file__))
 
 total_number_of_cores = \
     front_end.get_number_of_available_cores_on_machine()
