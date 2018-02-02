@@ -1233,24 +1233,6 @@ void update(uint ticks, uint b) {
     	}
     }
 
-    if(header.function_id == 3) {
-    	if(time_out_block_start != 0 && time_out_block_end != 0) {
-
-    		log_info("timeout");
-    		uint time_taken  = time_out_block_end - time_out_block_start;
-    		uint time_passed = time - time_out_block_end;
-
-    		if(time_taken == 0){
-    			if(time_passed == 5){leader_next_step();}
-    		}
-
-    		if(time_taken != 0){
-    			if(time_passed == time_taken * 5){leader_next_step();}
-    		}
-
-    	}
-    }
-
     // check that the run time hasn't already elapsed and thus needs to be killed
     if ((infinite_run != TRUE) && (time >= simulation_ticks)) {
         //log_info("Simulation complete.\n");

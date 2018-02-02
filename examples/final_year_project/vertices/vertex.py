@@ -46,7 +46,8 @@ class Vertex(
                ('OUTPUT_DATA', 2),
                ('TRANSMISSIONS', 3),
                ('STATE', 4),
-               ('NEIGHBOUR_INITIAL_STATES', 5)])
+               ('NEIGHBOUR_INITIAL_STATES', 5),
+               ('DICTIONARY', 6)])
 
     CORE_APP_IDENTIFIER = 0xBEEF
 
@@ -89,6 +90,9 @@ class Vertex(
         self._input_data_size  = (string_size * rows * num_string_cols) + \
                                  (4           * rows * (columns - num_string_cols)) + 28
         self._output_data_size = 10 * 1000
+        
+        '''set the dictionary to be a certain size'''
+        self._dictionary_size = 27 * 8 * 1000
 
         # app specific elements
         self.placement = None
@@ -258,7 +262,11 @@ class Vertex(
         
         spec.reserve_memory_region(
             region=self.DATA_REGIONS.NEIGHBOUR_INITIAL_STATES.value,
-            size=self.NEIGHBOUR_INITIAL_STATES_SIZE, label="neighour_states")    
+            size=self.NEIGHBOUR_INITIAL_STATES_SIZE, label="neighour_states") 
+        
+        spec.reserve_memory_region(
+            region=self.DATA_REGIONS.DICTIONARY.value,
+            size=self._dictionary_size, label="dictionary")       
 
     def read(self, placement, buffer_manager):
         """ Get the data written into sdram

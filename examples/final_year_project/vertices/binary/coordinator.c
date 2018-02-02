@@ -57,7 +57,8 @@ typedef enum regions_e {
 	OUTPUT_DATA,
     TRANSMISSIONS,
     STATE,
-    NEIGHBOUR_INITIAL_STATES
+    NEIGHBOUR_INITIAL_STATES,
+	DICTIONARY
 } regions_e;
 
 //! values for the priority for each callback
@@ -179,7 +180,7 @@ node_t * end_of_dict;
 
 struct index_info local_index;
 
-//timeout handler
+//TIMEOUT HANDLER
 uint time_out_block_start;
 uint time_out_block_end;
 uint reported_ready;
@@ -190,6 +191,11 @@ uint current_id;
 uint in_charge;
 uint linked_list_length;
 uint sum;
+
+//SDRAM DICTIONARY PARAM
+uint TCM_dict_exhausted  = 0;
+uint SDRAM_num_elements  = 0;
+uint SDRAM_next_slot     = 0;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // FUNCTION REFERENCES                                                                           //                                                                  //
@@ -204,6 +210,7 @@ void update(uint ticks, uint b);
 void c_main();
 
 //Memory Management
+address_t return_mem_address(uint partition);
 void resume_callback();
 void iobuf_data();
 
@@ -214,6 +221,8 @@ void retrieve_header_data();
 void record_string_entry(uint *int_arr, uint size);
 void record_int_entry(uint solution);
 void record_unqiue_items(uint start, uint end);
+void record_tcm_dict(uint start, uint end);
+void record_sdram_dict();
 
 //String Comparison
 uint compare_two_strings(uint *string_1, uint size_1, uint *string_2, uint size_2);
@@ -223,6 +232,8 @@ uint verify_signal(uint signal);
 //Dictionary Management
 node_t *search_dictionary(uint *string_to_search);
 void add_item_to_dictionary(uint *given_string, uint index, uint id);
+void write_dict_item_to_SDRAM(uint *given_string, uint id);
+uint search_dict_item_in_SDRAM(uint id_to_search);
 
 //Sending Messages
 void forward_string();
@@ -262,15 +273,24 @@ void report_to_leader(uint payload);
 // GENERIC UTILITY FUNCTIONS                                                                     //                                                       //
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+address_t return_mem_address(uint partition){
+
+	address_t address = data_specification_get_data_address();
+	address_t data_address =
+		data_specification_get_region(partition, address);
+
+	return data_address;
+
+}
+
+
 void resume_callback() {
     time = UINT32_MAX;
 }
 
 void iobuf_data() {
-    address_t address = data_specification_get_data_address();
-    address_t data_address =
-        data_specification_get_region(INPUT_DATA, address);
 
+    address_t data_address = return_mem_address(INPUT_DATA);
     int* my_string = (int *) &data_address[0];
 }
 
@@ -379,6 +399,61 @@ void add_item_to_dictionary(uint *given_string, uint index, uint id) {
 
 }
 
+void write_dict_item_to_SDRAM(uint *given_string, uint id) {
+
+	//538976288 stands for a 0 entry - if those occur don't store them
+    char entry_size = 0;
+	for(uint i = 0; i < 4; i++) {
+		if(given_string[i] == 538976288) {
+			break;
+		}
+		entry_size++;
+	}
+
+    address_t data_address = return_mem_address(DICTIONARY);
+
+    //UPDATE SDRAM LIST PARAM
+    SDRAM_num_elements = SDRAM_num_elements + 1;
+    SDRAM_next_slot    = SDRAM_next_slot + entry_size + 3;
+
+    //POINTER TO NEXT ITEM
+	bool recorded = recording_record(DICTIONARY,SDRAM_next_slot,sizeof(uint));
+
+	//ID
+	recorded = recording_record(DICTIONARY,id, sizeof(uint));
+
+	//FREQUENCY
+	recorded = recording_record(DICTIONARY, 1, sizeof(uint));
+
+	//GLOBAL_FREQUENCY
+	recorded = recording_record(DICTIONARY, 1, sizeof(uint));
+
+	for(uint i = 0; i < entry_size; i++) {
+	    bool recorded = recording_record(DICTIONARY, given_string[i], sizeof(uint));
+	}
+
+}
+
+uint search_dict_item_in_SDRAM(uint id_to_search){
+
+    address_t data_address = return_mem_address(DICTIONARY);
+
+    uint current_index = 1;
+
+    for(uint i = 0; i < SDRAM_num_elements; i++){
+
+    	if(id_to_search = data_address[current_index]){
+    		return current_index - 1;
+    	}
+    	else{
+    		current_index = data_address[current_index - 1];
+    	}
+    }
+
+    return 0;
+
+}
+
 uint compare_two_strings(uint *string_1, uint size_1, uint *string_2, uint size_2) {
 
     //compares two strings with each other
@@ -454,9 +529,7 @@ uint find_instance_of(uint given_id) {
 void send_string(uint data_entry_position) {
 
 	//take every column of strings and assign an unique id to each string
-    address_t address = data_specification_get_data_address();
-    address_t data_address =
-        data_specification_get_region(INPUT_DATA, address);
+    address_t data_address = return_mem_address(INPUT_DATA);
 
 	uint start = 7  + 4 * data_entry_position;
 	uint end   = 11 + 4 * data_entry_position;
@@ -640,9 +713,7 @@ void index_initialise_index() {
 
     uint current_id = 1;
 
-    address_t address = data_specification_get_data_address();
-    address_t data_address =
-        data_specification_get_region(INPUT_DATA, address);
+    address_t data_address = return_mem_address(INPUT_DATA);
 
 	uint i,j,start,end,count;
 	uint *current_entry;
@@ -820,7 +891,6 @@ void index_manage_proxy_leader(uint payload) {
 
 			//kickstart retrieving unique id's result -> counting
 		    #if defined(RECORD_UNIQUE_ITEMS) && (RECORD_UNIQUE_ITEMS == 1)
-				//start new function if required
 				if(current_leader == header.processor_id + 16){
 					log_info("END OF ID ASSIGNMENT PROCESS");
 					header.function_id = 3;
@@ -876,7 +946,6 @@ void histogram_start_function() {
 
 void histogram_receive(uint payload) {
 
-	//Case 1: You are the leader and waiting for reports
 	if(forward_mode_on == 0) {
 
 		//timeout handler
@@ -1041,9 +1110,7 @@ void retrieve_header_data() {
     log_info("Issuing 'Vertex' from chip %d, core %d", chip, core);
 
     //access the partition of the SDRAM where input data is stored
-    address_t address = data_specification_get_data_address();
-    address_t data_address =
-        data_specification_get_region(INPUT_DATA, address);
+    address_t data_address = return_mem_address(INPUT_DATA);
 
     //header data that contains:
     //- The data description
@@ -1078,6 +1145,11 @@ void retrieve_header_data() {
 }
 
 void record_unqiue_items(uint start, uint end) {
+	record_tcm_dict(start, end);
+	//record_sdram_dict();
+}
+
+void record_tcm_dict(uint start, uint end) {
 
 	node_t *item = dictionary;
 
@@ -1102,6 +1174,30 @@ void record_unqiue_items(uint start, uint end) {
 		}
 
 	}
+
+}
+
+void record_sdram_dict() {
+
+    address_t data_address = return_mem_address(DICTIONARY);
+
+    uint current_index = 0;
+
+    for(uint i = 0; i < SDRAM_num_elements; i++) {
+
+    	uint *result;
+    	uint entry_size = data_address[current_index] - current_index - 4;
+
+    	for(uint j = 0; j < entry_size; j++){
+    		result[j] = data_address[current_index + 4 + j];
+    	}
+
+		record_string_entry(result,entry_size);
+		record_int_entry(data_address[current_index + 3]);
+
+		current_index = data_address[current_index];
+
+    }
 
 }
 
@@ -1224,10 +1320,13 @@ static bool initialise_recording(){
 	//! \return True if recording initialisation is successful, false otherwise
 
     address_t address = data_specification_get_data_address();
-    address_t recording_region = data_specification_get_region(
-        OUTPUT_DATA, address);
+
+    address_t recording_region = data_specification_get_region(OUTPUT_DATA, address);
     bool success = recording_initialize(recording_region, &recording_flags);
-    log_info("Recording flags = 0x%08x", recording_flags);
+
+    recording_region = data_specification_get_region(DICTIONARY, address);
+    success = recording_initialize(recording_region, &recording_flags);
+
     return success;
 
 }
