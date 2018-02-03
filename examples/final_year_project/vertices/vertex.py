@@ -92,7 +92,7 @@ class Vertex(
         self._output_data_size = 10 * 1000
         
         '''set the dictionary to be a certain size'''
-        self._dictionary_size = 27 * 8 * 1000
+        self._dictionary_size = 32 * 8 * 1000
 
         # app specific elements
         self.placement = None

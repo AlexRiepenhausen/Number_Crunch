@@ -92,7 +92,7 @@ class Coordinator(
         self._output_data_size = 10 * 1000
         
         '''set the dictionary to be a certain size'''
-        self._dictionary_size = 27 * 8 * 1000
+        self._dictionary_size = 32 * 8 * 1000
 
         # app specific elements
         self.placement = None
@@ -284,7 +284,7 @@ class Coordinator(
         return record_raw
 
     def get_minimum_buffer_sdram_usage(self):
-        return self._input_data_size + self._output_data_size
+        return self._input_data_size+self._output_data_size+self._dictionary_size
 
     def get_n_timesteps_in_buffer_space(self, buffer_space, machine_time_step):
         return recording_utilities.get_n_timesteps_in_buffer_space(
