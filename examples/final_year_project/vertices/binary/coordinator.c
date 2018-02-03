@@ -29,7 +29,7 @@
  */
 
 //amount of milliseconds the application runs
-uint runtime = 3000;
+uint runtime = 10000;
 
 /*! multicast routing keys to communicate with neighbours */
 uint *key_values;
@@ -193,7 +193,7 @@ uint linked_list_length;
 uint sum;
 
 //SDRAM DICTIONARY PARAM
-uint TCM_dict_max  = 1;
+uint TCM_dict_max        = 1;
 uint SDRAM_num_elements  = 0;
 uint SDRAM_next_slot     = 0;
 
@@ -809,9 +809,7 @@ void index_initialise_index() {
 		if(element->frequency == 0) {
 
 			uint num_str[] = {current_entry[0],current_entry[1],current_entry[2],current_entry[3]};
-			log_info("TO SEARCH: %d", num_str[0]);
 			uint index_found = search_sdram_dict(num_str);
-			log_info("RESULT: %d", index_found);
 
 			//entry exists in sdram
 			if(index_found != -1) {

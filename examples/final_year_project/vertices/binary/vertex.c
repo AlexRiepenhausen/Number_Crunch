@@ -28,7 +28,7 @@
  */
 
 //amount of milliseconds the application runs
-uint runtime = 3000;
+uint runtime = 10000;
 
 /*! multicast routing keys to communicate with neighbours */
 uint *key_values;
@@ -56,7 +56,8 @@ typedef enum regions_e {
 	OUTPUT_DATA,
     TRANSMISSIONS,
     STATE,
-    NEIGHBOUR_INITIAL_STATES
+    NEIGHBOUR_INITIAL_STATES,
+	DICTIONARY
 } regions_e;
 
 //! values for the priority for each callback
@@ -190,11 +191,17 @@ uint in_charge;
 uint linked_list_length;
 uint sum;
 
+//SDRAM DICTIONARY PARAM
+uint TCM_dict_max        = 1;
+uint SDRAM_num_elements  = 0;
+uint SDRAM_next_slot     = 0;
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // FUNCTION REFERENCES                                                                           //                                                                  //
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 //Start Operation
+address_t return_mem_address(uint partition);
 static bool initialise_recording();
 static bool initialize(uint32_t *timer_period);
 
@@ -220,8 +227,12 @@ uint find_instance_of(uint given_id);
 uint verify_signal(uint signal);
 
 //Dictionary Management
-node_t *search_dictionary(uint *string_to_search);
+node_t *search_tcm_dictionary(uint *string_to_search);
+node_t *search_tcm_dict_with_id(uint id_to_search);
 void add_item_to_dictionary(uint *given_string, uint index, uint id);
+void write_dict_item_to_SDRAM(uint *given_string, uint id);
+uint search_sdram_dict_with_id(uint id_to_search);
+uint search_sdram_dict(uint *string_to_be_searched);
 
 //Sending Messages
 void forward_string();
@@ -264,19 +275,27 @@ void report_to_leader(uint payload);
 // GENERIC UTILITY FUNCTIONS                                                                     //                                                       //
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+address_t return_mem_address(uint partition){
+
+	address_t address = data_specification_get_data_address();
+	address_t data_address =
+		data_specification_get_region(partition, address);
+
+	return data_address;
+
+}
+
 void resume_callback() {
     time = UINT32_MAX;
 }
 
 void iobuf_data() {
-    address_t address = data_specification_get_data_address();
-    address_t data_address =
-        data_specification_get_region(INPUT_DATA, address);
 
+	address_t data_address = return_mem_address(INPUT_DATA);
     int* my_string = (int *) &data_address[0];
 }
 
-node_t *search_dictionary(uint *string_to_search) {
+node_t *search_tcm_dictionary(uint *string_to_search) {
 
 	node_t * item = dictionary;
 
@@ -316,7 +335,7 @@ node_t *search_dictionary(uint *string_to_search) {
 
 }
 
-node_t *search_dictionary_with_id(uint id_to_search) {
+node_t *search_tcm_dict_with_id(uint id_to_search) {
 
 	node_t * item = dictionary;
 
@@ -333,51 +352,153 @@ node_t *search_dictionary_with_id(uint id_to_search) {
 
 }
 
+uint search_sdram_dict_with_id(uint id_to_search){
+
+	//SDRAM DICT NOT IN USE
+	if(linked_list_length < TCM_dict_max) {
+		return -1;
+	}
+
+    address_t data_address = return_mem_address(DICTIONARY);
+
+    uint current_index = 0;
+
+    for(uint i = 0; i < SDRAM_num_elements; i++){
+
+    	if(id_to_search == data_address[current_index+1]){
+    		return current_index;
+    	}
+    	else{
+    		current_index = data_address[current_index];
+    	}
+
+    }
+
+    return -1;
+
+}
+
+uint search_sdram_dict(uint *string_to_be_searched) {
+
+	//SDRAM DICT NOT IN USE
+	if(linked_list_length < TCM_dict_max) {
+		return -1;
+	}
+
+	address_t data_address = return_mem_address(DICTIONARY);
+    uint current_index = 0;
+
+    for(uint i = 0; i < SDRAM_num_elements; i++) {
+
+    	uint *current_string;
+    	uint entry_size = data_address[current_index] - current_index - 4;
+
+    	for(uint j = 0; j < entry_size; j++){
+    		current_string[j] = data_address[current_index + 4 + j];
+    	}
+
+    	if(compare_two_strings(current_string,entry_size,string_to_be_searched,4) == 1) {
+    		return current_index;
+    	}
+
+		current_index = data_address[current_index];
+
+    }
+
+
+    return -1;
+
+}
+
 void add_item_to_dictionary(uint *given_string, uint index, uint id) {
 
-	node_t * item = end_of_dict;
+	if(linked_list_length >= TCM_dict_max) {
+		write_dict_item_to_SDRAM(given_string, id);
+	}
+	else{
+
+		node_t * item = end_of_dict;
+
+		//538976288 stands for a 0 entry - if those occur don't store them
+		uint count = 0;
+		for(uint i = 0; i < 4; i++){
+			if(given_string[i] == 538976288) {
+				break;
+			}
+			count++;
+		}
+
+		item->entry_size = count;
+
+	    uint *new_entry = malloc(count*sizeof(uint));
+	    for(int i = 0; i < count; i++){new_entry[i] = given_string[i];}
+
+	    item->frequency        = 1;
+	    item->global_frequency = 1;
+		item->entry            = new_entry;
+		item->id               = id;
+		item->index_start      = index;
+		item->index_end        = index+1;
+
+		item->next = malloc(sizeof(node_t));
+		item->next->id          = -1;
+		item->next->frequency   = 0;
+		item->next->index_start = 0;
+		item->next->index_end   = 0;
+
+	    end_of_dict = item->next;
+
+		#if defined(DEBUG_3) && (DEBUG_3 == 1)
+		 if((time > DEBUG_START) && (time < DEBUG_END)) {
+			log_info("----------ADD------------");
+			log_info("| ENTRY: %d", item->entry[0]);
+			log_info("| FREQ : %d", item->frequency);
+			log_info("| START: %d", item->index_start);
+			log_info("| END  : %d", item->index_end);
+			log_info("| ID   : %d", item->id);
+		 }
+		#endif
+
+		linked_list_length++;
+
+	}
+
+}
+
+void write_dict_item_to_SDRAM(uint *given_string, uint id) {
+
+	log_info("WRITE SDRAM ID: %d", id);
 
 	//538976288 stands for a 0 entry - if those occur don't store them
-	uint count = 0;
-	for(uint i = 0; i < 4; i++){
+    char entry_size = 0;
+	for(uint i = 0; i < 4; i++) {
 		if(given_string[i] == 538976288) {
 			break;
 		}
-		count++;
+		entry_size++;
 	}
 
-	item->entry_size = count;
+    address_t data_address = return_mem_address(DICTIONARY);
 
-    uint *new_entry = malloc(count*sizeof(uint));
-    for(int i = 0; i < count; i++){new_entry[i] = given_string[i];}
+    //POINTER TO NEXT ITEM
+    data_address[SDRAM_next_slot + 0] = SDRAM_next_slot + entry_size + 4;
 
-    item->frequency        = 1;
-    item->global_frequency = 1;
-	item->entry            = new_entry;
-	item->id               = id;
-	item->index_start      = index;
-	item->index_end        = index+1;
+    //ID
+    data_address[SDRAM_next_slot + 1] = id;
 
-	item->next = malloc(sizeof(node_t));
-	item->next->id          = -1;
-	item->next->frequency   = 0;
-	item->next->index_start = 0;
-	item->next->index_end   = 0;
+    //FREQUENCY
+    data_address[SDRAM_next_slot + 2] = 1;
 
-    end_of_dict = item->next;
+    //GLOBAL FREQUENCY
+    data_address[SDRAM_next_slot + 3] = 1;
 
-	#if defined(DEBUG_3) && (DEBUG_3 == 1)
-	 if((time > DEBUG_START) && (time < DEBUG_END)) {
-		log_info("----------ADD------------");
-		log_info("| ENTRY: %d", item->entry[0]);
-		log_info("| FREQ : %d", item->frequency);
-		log_info("| START: %d", item->index_start);
-		log_info("| END  : %d", item->index_end);
-		log_info("| ID   : %d", item->id);
-	 }
-	#endif
+	for(uint i = 0; i < entry_size; i++) {
+		data_address[SDRAM_next_slot + 4 + i] = given_string[i];
+	}
 
-	linked_list_length++;
+    //UPDATE SDRAM LIST PARAM
+    SDRAM_num_elements = SDRAM_num_elements + 1;
+    SDRAM_next_slot    = SDRAM_next_slot + entry_size + 4;
 
 }
 
@@ -456,9 +577,7 @@ uint find_instance_of(uint given_id) {
 void send_string(uint data_entry_position) {
 
 	//take every column of strings and assign an unique id to each string
-    address_t address = data_specification_get_data_address();
-    address_t data_address =
-        data_specification_get_region(INPUT_DATA, address);
+	address_t data_address = return_mem_address(INPUT_DATA);
 
 	uint start = 7  + 4 * data_entry_position;
 	uint end   = 11 + 4 * data_entry_position;
@@ -631,10 +750,8 @@ void index_initialise_index() {
 	linked_list_length = 0;
 
     uint current_id = 1;
-
-    address_t address = data_specification_get_data_address();
-    address_t data_address =
-        data_specification_get_region(INPUT_DATA, address);
+    address_t data_address = return_mem_address(INPUT_DATA);
+    address_t dict_address = return_mem_address(DICTIONARY);
 
 	uint i,j,start,end,count;
 	uint *current_entry;
@@ -652,7 +769,7 @@ void index_initialise_index() {
 			count++;
 		}
 
-		node_t *element = search_dictionary(current_entry);
+		node_t *element = search_tcm_dictionary(current_entry);
 
 		#if defined(DEBUG_3) && (DEBUG_3 == 1)
 			if((time > DEBUG_START) && (time < DEBUG_END)) {
@@ -677,9 +794,31 @@ void index_initialise_index() {
 
 		}
 
-		//entry does not exist in dictionary
+		//entry does not exist in tcm dictionary
 		if(element->frequency == 0) {
-			add_item_to_dictionary(current_entry,i,0);
+
+			//check if item exists in sdram dictionary
+			uint num_str[] = {current_entry[0],current_entry[1],current_entry[2],current_entry[3]};
+			uint index_found = search_sdram_dict(num_str);
+
+			//entry exists in sdram
+			if(index_found != -1) {
+
+				//FREQUENCY
+				dict_address[index_found+2]  = dict_address[index_found+2] + 1;
+
+			}
+
+			if(index_found == -1) {
+
+				//entry does not exist in sdram dictionary either
+				local_index.id_index[i] = current_id;
+				add_item_to_dictionary(num_str,i,current_id);
+				local_index.max_id = current_id;
+				current_id++;
+
+			}
+
 		}
 
 	}
@@ -692,7 +831,7 @@ void index_initialise_index() {
 	   		   test[1] = 538976288;
 	   		   test[2] = 538976288;
 	   		   test[3] = 538976288;
-	   		   node_t *element = search_dictionary(test);
+	   		   node_t *element = search_tcm_dictionary(test);
 
 	   		   if(element->frequency > 0){
 	   			   log_info("ENTRY: %d", element->entry[0]);
@@ -710,9 +849,8 @@ void index_initialise_index() {
 void index_complete_index(uint unique_id, uint start_index) {
 
 	//get the SDRAM address
-    address_t address = data_specification_get_data_address();
-    address_t data_address =
-        data_specification_get_region(INPUT_DATA, address);
+	address_t data_address = return_mem_address(INPUT_DATA);
+    address_t dict_address = return_mem_address(DICTIONARY);
 
 	//read the first single entry
 	uint i,j;
@@ -734,20 +872,48 @@ void index_complete_index(uint unique_id, uint start_index) {
     	    	count++;
     	    }
 
-    	    node_t *element = search_dictionary(current_entry);
+    	    node_t *element = search_tcm_dictionary(current_entry);
 
-    	    if(element->id == 0) {
-    	    	element->id = current_id;
+    		//entry does not exist in tcm dictionary -> goto sdram
+    		if(element->frequency == 0) {
 
-    			if(local_index.max_id < current_id){
-        			local_index.max_id = current_id;
-    			}
+    			uint num_str[] = {current_entry[0],current_entry[1],current_entry[2],current_entry[3]};
+    			uint index_found = search_sdram_dict(num_str);
 
-    			current_id++;
+        	    if(dict_address[index_found+1] == 0) {
 
-    	    }
+        			//ID
+        			dict_address[index_found+1] = current_id;
 
-    	    local_index.id_index[i] = element->id;
+        			if(local_index.max_id < current_id){
+            			local_index.max_id = current_id;
+        			}
+
+        			current_id++;
+
+        	    }
+
+        	    local_index.id_index[i] = dict_address[index_found+1];
+
+    		}
+
+    		//element exists in tcm -> no need to go to sdram
+    		if(element->frequency != 0) {
+
+        	    if(element->id == 0) {
+        	    	element->id = current_id;
+
+        			if(local_index.max_id < current_id){
+            			local_index.max_id = current_id;
+        			}
+
+        			current_id++;
+
+        	    }
+
+        	    local_index.id_index[i] = element->id;
+
+    		}
 
         }
 
@@ -759,9 +925,9 @@ void index_complete_index(uint unique_id, uint start_index) {
 
 void index_update_index() {
 
-    node_t *element = search_dictionary(local_index.message);
+    node_t *element = search_tcm_dictionary(local_index.message);
 
-    //check if element exists
+    //check if element exists in tcm-dictionary
     if(element->id != -1) {
 
     	//check if element has id 0 assigned to it
@@ -774,9 +940,7 @@ void index_update_index() {
 			}
 
         	//get the SDRAM address
-            address_t address = data_specification_get_data_address();
-            address_t data_address =
-                data_specification_get_region(INPUT_DATA, address);
+			address_t data_address = return_mem_address(INPUT_DATA);
 
         	uint *current_entry;
 
@@ -799,7 +963,54 @@ void index_update_index() {
             }
 
         }
+
     }
+
+    //check if element exists in tcm-dictionary
+    if(element->frequency == 0) {
+
+        address_t dict_address = return_mem_address(DICTIONARY);
+        uint index_found = search_sdram_dict(local_index.message);
+
+		//entry exists in sdram
+		if(index_found != -1) {
+
+		    if(dict_address[index_found+1] == 0) {
+
+				//ID
+				dict_address[index_found+1] = local_index.message_id;
+
+				if(local_index.max_id < local_index.message_id){
+	    			local_index.max_id = local_index.message_id;
+				}
+
+				address_t data_address = return_mem_address(INPUT_DATA);
+	        	uint *current_entry;
+
+	            for(uint i = 0; i < header.num_rows; i++) {
+
+	            	uint start = 7  + 4*i;
+	            	uint end   = 11 + 4*i;
+	            	uint count = 0;
+
+	            	//current entry
+	        	    for(uint j = start; j < end; j++) {
+	        	    	current_entry[count] = *(&data_address[j]);
+	        	    	count++;
+	        	    }
+
+	    			uint num_str[] = {current_entry[0],current_entry[1],current_entry[2],current_entry[3]};
+	    		    if(compare_two_strings(num_str,4,local_index.message,4) == 1) {
+	    		    	local_index.id_index[i] = element->id;
+	    		    }
+
+	            }
+
+		    }
+
+		}
+
+    }//if element->frequency == 0
 
 }
 
@@ -968,11 +1179,27 @@ void histogram_receive(uint payload) {
 
 void histogram_update(){
 
-	node_t *found = search_dictionary_with_id(local_index.message_id);
+	node_t *found = search_tcm_dict_with_id(local_index.message_id);
 
+    //if in tcm dictionary
 	if(found->frequency != 0) {
 		found->global_frequency = local_index.message[3];
 	}
+
+    //check if in sdram if need be
+    if(found->frequency == 0) {
+
+        uint index_found = search_sdram_dict(local_index.message);
+
+		//entry exists in sdram
+		if(index_found != -1) {
+
+			//ID
+	        address_t dict_address = return_mem_address(DICTIONARY);
+			dict_address[index_found+3] = local_index.message[3];
+		}
+
+    }
 
 	send_state(-1, 2);
 
@@ -986,8 +1213,33 @@ void histogram_update(){
 
 void histogram_query(){
 
-	node_t *found = search_dictionary_with_id(local_index.message_id);
-	send_state(found->frequency, 2);
+	node_t *found = search_tcm_dict_with_id(local_index.message_id);
+
+    //if in tcm dictionary
+	if(found->frequency != 0) {
+		found->global_frequency = local_index.message[3];
+		send_state(found->frequency, 2);
+	}
+
+    //check if in sdram if need be
+    if(found->frequency == 0) {
+
+        uint index_found = search_sdram_dict_with_id(local_index.message_id);
+
+		//entry exists in sdram
+		if(index_found != -1) {
+			//FREQUENCY
+	        address_t dict_address = return_mem_address(DICTIONARY);
+			send_state(dict_address[index_found+2], 2);
+		}
+
+		//entry does not exist in sdram
+		if(index_found != -1) {
+			send_state(0, 2);
+		}
+
+
+    }
 
 	#if defined(DEBUG_1) && (DEBUG_1 == 1)
 		if((time > DEBUG_START) && (time < DEBUG_END)) {
@@ -1106,9 +1358,7 @@ void retrieve_header_data() {
     log_info("Issuing 'Vertex' from chip %d, core %d", chip, core);
 
     //access the partition of the SDRAM where input data is stored
-    address_t address = data_specification_get_data_address();
-    address_t data_address =
-        data_specification_get_region(INPUT_DATA, address);
+    address_t data_address = return_mem_address(INPUT_DATA);
 
     //header data that contains:
     //- The data description
@@ -1143,6 +1393,11 @@ void retrieve_header_data() {
 }
 
 void record_unqiue_items(uint start, uint end) {
+	record_tcm_dict(start, end);
+	record_sdram_dict();
+}
+
+void record_tcm_dict(uint start, uint end) {
 
 	node_t *item = dictionary;
 
@@ -1167,6 +1422,35 @@ void record_unqiue_items(uint start, uint end) {
 		}
 
 	}
+
+}
+
+void record_sdram_dict() {
+
+    address_t data_address = return_mem_address(DICTIONARY);
+
+    uint current_index = 0;
+
+    for(uint i = 0; i < SDRAM_num_elements; i++) {
+
+    	uint *result;
+    	uint entry_size = data_address[current_index] - current_index - 4;
+
+    	for(uint j = 0; j < entry_size; j++){
+    		result[j] = data_address[current_index + 4 + j];
+    	}
+
+    	log_info("-----------------------");
+    	for(uint k = current_index; k < data_address[current_index]; k++){
+        	log_info("INFO: %d", data_address[k]);
+    	}
+
+		record_string_entry(result,entry_size);
+		record_int_entry(data_address[current_index + 3]);
+
+		current_index = data_address[current_index];
+
+    }
 
 }
 
@@ -1269,10 +1553,7 @@ static bool initialise_recording(){
 
 	//! \brief Initialises the recording parts of the model
 	//! \return True if recording initialisation is successful, false otherwise
-
-    address_t address = data_specification_get_data_address();
-    address_t recording_region = data_specification_get_region(
-        OUTPUT_DATA, address);
+	address_t recording_region = return_mem_address(OUTPUT_DATA);
     bool success = recording_initialize(recording_region, &recording_flags);
     log_info("Recording flags = 0x%08x", recording_flags);
     return success;
