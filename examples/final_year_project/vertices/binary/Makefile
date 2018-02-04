@@ -3,11 +3,11 @@ ifndef SPINN_DIRS
     $(error SPINN_DIRS is not set.  Please define SPINN_DIRS (possibly by running "source setup" in the spinnaker package folder))
 endif
 
-#APP = vertex
-APP = coordinator
+APP = vertex
+#APP = coordinator
 BUILD_DIR = build/
-#SOURCES = vertex.c
-SOURCES = coordinator.c
+SOURCES = vertex.c
+#SOURCES = coordinator.c
 
 
 MAKEFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))

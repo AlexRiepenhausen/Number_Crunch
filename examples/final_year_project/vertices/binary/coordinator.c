@@ -7,12 +7,12 @@
 #include <debug.h>
 
 /* Debugging mode */
-#define DEBUG_1 0
+#define DEBUG_1 1
 #define DEBUG_2 0
 #define DEBUG_3 0
 #define DEBUG_4 0
 #define DEBUG_START 0
-#define DEBUG_END   3000
+#define DEBUG_END   100
 
 /* 0 Default information about cores
  * DEBUG_1 Enables information about messages received and sent
@@ -125,7 +125,7 @@ struct header_info {
 struct header_info header;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-// DATA ENTRY INDEX - assigns unqiue id's to every data entry within every column           //
+// DATA ENTRY INDEX - assigns unqiue id's to every data entry within every column                //
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 struct index_info {
@@ -656,10 +656,6 @@ uint verify_signal(uint signal) {
 
 void send_signal(uint id, uint signal) {
 
-	//0 processing finished completely
-	//1 core ready for other tasks
-
-	//take every column of strings and assign an unique id to each string
 	send_state(signal, 2);
 	send_state(signal, 2);
 	send_state(signal, 2);
@@ -1211,7 +1207,7 @@ void retrieve_header_data() {
 
 void record_unqiue_items(uint start, uint end) {
 	record_tcm_dict(start, end);
-	record_sdram_dict();
+	record_sdram_dict(start, end);
 }
 
 void record_tcm_dict(uint start, uint end) {
@@ -1227,13 +1223,12 @@ void record_tcm_dict(uint start, uint end) {
 		if(item->id >= start) {
 
 			if(item->id <= end) {
+				log_info("-----------------------");
+				log_info("INFO-TCM: %d", item->entry[0]);
+				log_info("INFO-TCM: %d", item->id);
 				record_string_entry(item->entry,item->entry_size);
 				record_int_entry(item->global_frequency);
 				item = item->next;
-			}
-
-			if(item->id > end) {
-				return;
 			}
 
 		}
@@ -1242,7 +1237,7 @@ void record_tcm_dict(uint start, uint end) {
 
 }
 
-void record_sdram_dict() {
+void record_sdram_dict(uint start, uint end) {
 
     address_t data_address = return_mem_address(DICTIONARY);
 
@@ -1257,13 +1252,23 @@ void record_sdram_dict() {
     		result[j] = data_address[current_index + 4 + j];
     	}
 
-    	log_info("-----------------------");
-    	for(uint k = current_index; k < data_address[current_index]; k++){
-        	log_info("INFO: %d", data_address[k]);
-    	}
+    	uint current_id = data_address[current_index+1];
 
-		record_string_entry(result,entry_size);
-		record_int_entry(data_address[current_index + 3]);
+    	if(current_id >= start) {
+
+    		if(current_id <= end) {
+
+        		record_string_entry(result,entry_size);
+        		record_int_entry(data_address[current_index + 3]);
+
+            	log_info("-----------------------");
+            	for(uint k = current_index; k < data_address[current_index]; k++){
+                	log_info("INFOSDRAM: %d", data_address[k]);
+            	}
+
+    		}
+
+    	}
 
 		current_index = data_address[current_index];
 

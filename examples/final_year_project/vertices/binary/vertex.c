@@ -7,12 +7,12 @@
 #include <debug.h>
 
 /* Debugging mode */
-#define DEBUG_1 0
-#define DEBUG_2 0
+#define DEBUG_1 1
+#define DEBUG_2 1
 #define DEBUG_3 0
 #define DEBUG_4 0
-#define DEBUG_START 6000
-#define DEBUG_END   6050
+#define DEBUG_START 0
+#define DEBUG_END   300
 /* 0 Default information about cores
  * DEBUG_1 Enables information about messages received and sent
  * DEBUG_2 Debug info on the id distribution algorithm
@@ -534,6 +534,9 @@ uint find_instance_of(uint given_id) {
 
 	while(item->frequency != 0) {
 
+		//log_info("DICT EL: %d", item->entry[0]);
+		//log_info("DICT ID: %d", item->id);
+
 	#if defined(DEBUG_3) && (DEBUG_3 == 1)
 		if((time > DEBUG_START) && (time < DEBUG_END)) {
 			log_info("|                         ");
@@ -569,6 +572,32 @@ uint find_instance_of(uint given_id) {
 
 	   }
 	#endif
+
+	//not recorded in tcm dictionary -> brute force search
+	if(compare == -1) {
+		for(uint i = 0; i < header.num_rows; i++){
+			if(local_index.id_index[i] == given_id){
+
+				/**
+				uint index = search_sdram_dict_with_id(given_id); //returns -1
+				address_t data_address = return_mem_address(DICTIONARY);
+
+				log_info("INDEX: %d", index);
+				log_info("GIVENID: %d", given_id);
+				log_info("ENTRY: %d", data_address[index+0]);
+				log_info("ENTRY: %d", data_address[index+1]);
+				log_info("ENTRY: %d", data_address[index+2]);
+				log_info("ENTRY: %d", data_address[index+3]);
+				log_info("ENTRY: %d", data_address[index+4]);
+				log_info("ENTRY: %d", data_address[index+5]);
+				log_info("ENTRY: %d", data_address[index+6]);
+				log_info("ENTRY: %d", data_address[index+7]); */
+
+
+				return i;
+			}
+		}
+	}
 
     return compare;
 
@@ -758,7 +787,9 @@ void index_initialise_index() {
 
 	for(i = 0; i < header.num_rows; i++) {
 
+		//set index to 0
 		local_index.id_index[i] = 0;
+
 		in_charge = 0;
 		start = 7  + 4 * i;
 		end   = 11 + 4 * i;
@@ -810,13 +841,7 @@ void index_initialise_index() {
 			}
 
 			if(index_found == -1) {
-
-				//entry does not exist in sdram dictionary either
-				local_index.id_index[i] = current_id;
-				add_item_to_dictionary(num_str,i,current_id);
-				local_index.max_id = current_id;
-				current_id++;
-
+				add_item_to_dictionary(current_entry,i,0);
 			}
 
 		}
@@ -1038,11 +1063,14 @@ void index_receive(uint payload) {
 			header.function_id = local_index.message_id;
 			send_state(-1,2);
 		}
+		else {
 
-		//Select Mode of Operation
-		if(in_charge == 0) {index_act_as_subordinate();}
+			//Select Mode of Operation
+			if(in_charge == 0) {index_act_as_subordinate();}
 
-		if(in_charge == 1) {index_act_as_leader();}
+			if(in_charge == 1) {index_act_as_leader();}
+
+		}
 
 	}
 
@@ -1096,12 +1124,15 @@ void index_act_as_subordinate() {
 
 	//0-0-0-0 -> reassign leader
 	if(verify_signal(0) == 1) {
+
 		if(local_index.message[3]+1 == header.processor_id){
 
 			in_charge = 1; //-> you are the new leader
 
 			//Make sure that the index is complete
 			int zeros_exist = find_instance_of(0); //find first occurence of 0 index
+
+			//log_info("DEEZNATS: %d", zeros_exist);
 
 			//zeros exist
 			if(zeros_exist != -1) {
@@ -1129,6 +1160,7 @@ void index_act_as_subordinate() {
 			#endif
 
 		}
+
 	}
 
 	//normal string message
@@ -1189,7 +1221,7 @@ void histogram_update(){
     //check if in sdram if need be
     if(found->frequency == 0) {
 
-        uint index_found = search_sdram_dict(local_index.message);
+        uint index_found = search_sdram_dict_with_id(local_index.message_id);
 
 		//entry exists in sdram
 		if(index_found != -1) {
@@ -1197,6 +1229,7 @@ void histogram_update(){
 			//ID
 	        address_t dict_address = return_mem_address(DICTIONARY);
 			dict_address[index_found+3] = local_index.message[3];
+
 		}
 
     }
@@ -1217,8 +1250,14 @@ void histogram_query(){
 
     //if in tcm dictionary
 	if(found->frequency != 0) {
-		found->global_frequency = local_index.message[3];
 		send_state(found->frequency, 2);
+
+		#if defined(DEBUG_1) && (DEBUG_1 == 1)
+			if((time > DEBUG_START) && (time < DEBUG_END)) {
+				log_info("SEND FREQUENCY: %d", found->frequency);
+			}
+		#endif
+
 	}
 
     //check if in sdram if need be
@@ -1231,21 +1270,29 @@ void histogram_query(){
 			//FREQUENCY
 	        address_t dict_address = return_mem_address(DICTIONARY);
 			send_state(dict_address[index_found+2], 2);
+
+			#if defined(DEBUG_1) && (DEBUG_1 == 1)
+				if((time > DEBUG_START) && (time < DEBUG_END)) {
+					log_info("SEND FREQUENCY: %d", dict_address[index_found+2]);
+				}
+			#endif
+
 		}
 
 		//entry does not exist in sdram
-		if(index_found != -1) {
+		if(index_found == -1) {
 			send_state(0, 2);
-		}
 
+			#if defined(DEBUG_1) && (DEBUG_1 == 1)
+				if((time > DEBUG_START) && (time < DEBUG_END)) {
+					log_info("SEND FREQUENCY: %d", 0);
+				}
+			#endif
+
+		}
 
     }
 
-	#if defined(DEBUG_1) && (DEBUG_1 == 1)
-		if((time > DEBUG_START) && (time < DEBUG_END)) {
-			log_info("SEND FREQUENCY: %d", found->frequency);
-		}
-	#endif
 
 }
 
@@ -1394,7 +1441,7 @@ void retrieve_header_data() {
 
 void record_unqiue_items(uint start, uint end) {
 	record_tcm_dict(start, end);
-	record_sdram_dict();
+	record_sdram_dict(start, end);
 }
 
 void record_tcm_dict(uint start, uint end) {
@@ -1410,14 +1457,18 @@ void record_tcm_dict(uint start, uint end) {
 		if(item->id >= start) {
 
 			if(item->id <= end) {
+				log_info("-----------------------");
+				log_info("INFO-TCM: %d", item->entry[0]);
+				log_info("INFO-TCM: %d", item->id);
 				record_string_entry(item->entry,item->entry_size);
 				record_int_entry(item->global_frequency);
 				item = item->next;
 			}
 
+			/**
 			if(item->id > end) {
 				return;
-			}
+			}**/
 
 		}
 
@@ -1425,7 +1476,7 @@ void record_tcm_dict(uint start, uint end) {
 
 }
 
-void record_sdram_dict() {
+void record_sdram_dict(uint start, uint end) {
 
     address_t data_address = return_mem_address(DICTIONARY);
 
@@ -1440,13 +1491,23 @@ void record_sdram_dict() {
     		result[j] = data_address[current_index + 4 + j];
     	}
 
-    	log_info("-----------------------");
-    	for(uint k = current_index; k < data_address[current_index]; k++){
-        	log_info("INFO: %d", data_address[k]);
-    	}
+    	uint current_id = data_address[current_index+1];
 
-		record_string_entry(result,entry_size);
-		record_int_entry(data_address[current_index + 3]);
+    	if(current_id >= start) {
+
+    		if(current_id <= end) {
+
+        		record_string_entry(result,entry_size);
+        		record_int_entry(data_address[current_index + 3]);
+
+            	log_info("-----------------------");
+            	for(uint k = current_index; k < data_address[current_index]; k++){
+                	log_info("INFOSDRAM: %d", data_address[k]);
+            	}
+
+    		}
+
+    	}
 
 		current_index = data_address[current_index];
 
