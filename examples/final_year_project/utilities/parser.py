@@ -25,7 +25,7 @@ class parser(object):
             return data_parcel
     
     def write_to_csv(self, new_filename, array):
-        
+             
         with open(new_filename, "wb") as f:
             writer = csv.writer(f)
             
