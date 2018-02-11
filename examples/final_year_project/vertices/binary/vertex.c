@@ -7,12 +7,12 @@
 #include <debug.h>
 
 /* Debugging mode */
-#define DEBUG_1 0
+#define DEBUG_1 1
 #define DEBUG_2 0
 #define DEBUG_3 0
 #define DEBUG_4 0
-#define DEBUG_START 0
-#define DEBUG_END   0
+#define DEBUG_START 28000
+#define DEBUG_END   28200
 /* 0 Default information about cores
  * DEBUG_1 Enables information about messages received and sent
  * DEBUG_2 Debug info on the id distribution algorithm
@@ -28,7 +28,7 @@
  */
 
 //amount of milliseconds the application runs
-uint runtime = 15000;
+uint runtime = 35000;
 
 /*! multicast routing keys to communicate with neighbours */
 uint *key_values;
@@ -227,7 +227,6 @@ void retrieve_header_data();
 void record_string_entry(uint *int_arr, uint size);
 void record_int_entry(uint solution);
 void record_unqiue_items(uint start, uint end);
-uint record_tcm_dict(start, end);
 
 //String Comparison
 uint compare_two_strings(uint *string_1, uint size_1, uint *string_2, uint size_2);
@@ -1190,11 +1189,7 @@ void histogram_update(){
 
 		//entry exists in sdram
 		if(index_found != -1) {
-
-			//ID
-	        address_t DICT_ADDRESS = return_mem_address(DICTIONARY);
 			DICT_ADDRESS[index_found+3] = local_index.message[3];
-
 		}
 
     }
@@ -1407,34 +1402,33 @@ void retrieve_header_data() {
 }
 
 void record_unqiue_items(uint start, uint end) {
-	uint offset = record_tcm_dict(start, end);
-	record_sdram_dict(offset, end);
+	record_tcm_dict(start, end);
+	record_sdram_dict(start, end);
 }
 
-uint record_tcm_dict(uint start, uint end) {
-
-	uint count = start;
+void record_tcm_dict(uint start, uint end) {
 
 	node_t *item = dictionary;
 
 	while(item->frequency != 0) {
 
-		count = item->id;
+		if(item->id < start) {
+			item = item->next;
+		}
 
-		if(count >= start) {
+		if(item->id >= start) {
 
-			if(count <= end) {
+			if(item->id <= end) {
+				log_info("ID: %d",item->id);
 				record_string_entry(item->entry,item->entry_size);
 				record_int_entry(item->global_frequency);
+				item = item->next;
+
 			}
 
 		}
 
-		item = item->next;
-
 	}
-
-	return count;
 
 }
 
@@ -1456,10 +1450,9 @@ void record_sdram_dict(uint start, uint end) {
     	if(current_id >= start) {
 
     		if(current_id <= end) {
-
+				log_info("ID: %d",current_id);
         		record_string_entry(result,entry_size);
         		record_int_entry(DICT_ADDRESS[current_index + 3]);
-
     		}
 
     	}

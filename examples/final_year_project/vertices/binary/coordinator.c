@@ -7,12 +7,12 @@
 #include <debug.h>
 
 /* Debugging mode */
-#define DEBUG_1 0
+#define DEBUG_1 1
 #define DEBUG_2 0
 #define DEBUG_3 0
 #define DEBUG_4 0
-#define DEBUG_START 0
-#define DEBUG_END   0
+#define DEBUG_START 28000
+#define DEBUG_END   28200
 
 /* 0 Default information about cores
  * DEBUG_1 Enables information about messages received and sent
@@ -29,7 +29,7 @@
  */
 
 //amount of milliseconds the application runs
-uint runtime = 15000;
+uint runtime = 35000;
 
 /*! multicast routing keys to communicate with neighbours */
 uint *key_values;
@@ -1213,6 +1213,7 @@ void record_tcm_dict(uint start, uint end) {
 		if(item->id >= start) {
 
 			if(item->id <= end) {
+				log_info("ID: %d",item->id);
 				record_string_entry(item->entry,item->entry_size);
 				record_int_entry(item->global_frequency);
 				item = item->next;
@@ -1242,6 +1243,7 @@ void record_sdram_dict(uint start, uint end) {
     	if(current_id >= start) {
 
     		if(current_id <= end) {
+				log_info("ID: %d",current_id);
         		record_string_entry(result,entry_size);
         		record_int_entry(DICT_ADDRESS[current_index + 3]);
     		}

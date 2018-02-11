@@ -28,7 +28,7 @@ load_data_onto_vertices(data,
                         num_string_cols,
                         function_id)
 
-front_end.run(15000)
+front_end.run(35000)
 
 placements = front_end.placements()
 buffer_manager = front_end.buffer_manager()
@@ -36,7 +36,7 @@ buffer_manager = front_end.buffer_manager()
 results = Output_To_CSV(placements, buffer_manager)
 results.function_three(getData)
 
-#esults = Output_To_Console(placements, buffer_manager)
+#results = Output_To_Console(placements, buffer_manager)
 #results.function_three()
         
 front_end.stop()
