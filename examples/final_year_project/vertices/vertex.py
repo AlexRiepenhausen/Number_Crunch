@@ -89,10 +89,10 @@ class Vertex(
         allocate space for entries and 24 bytes for the 6 integers that make up the header information'''
         self._input_data_size  = (string_size * rows * num_string_cols) + \
                                  (4           * rows * (columns - num_string_cols)) + 28
-        self._output_data_size = 10 * 5000
+        self._output_data_size = 10 * 50000
         
         '''set the dictionary to be a certain size'''
-        self._dictionary_size = 32 * 8 * 1500
+        self._dictionary_size = 32 * 8 * 15000
 
         # app specific elements
         self.placement = None

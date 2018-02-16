@@ -28,7 +28,7 @@ load_data_onto_vertices(data,
                         num_string_cols,
                         function_id)
 
-front_end.run(35000)
+front_end.run(40000)
 
 placements = front_end.placements()
 buffer_manager = front_end.buffer_manager()

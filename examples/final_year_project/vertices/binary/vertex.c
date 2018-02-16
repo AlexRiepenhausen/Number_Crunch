@@ -11,8 +11,9 @@
 #define DEBUG_2 0
 #define DEBUG_3 0
 #define DEBUG_4 0
-#define DEBUG_START 28000
-#define DEBUG_END   28200
+#define DEBUG_START 30400
+#define DEBUG_END   30600
+
 /* 0 Default information about cores
  * DEBUG_1 Enables information about messages received and sent
  * DEBUG_2 Debug info on the id distribution algorithm
@@ -28,7 +29,7 @@
  */
 
 //amount of milliseconds the application runs
-uint runtime = 35000;
+uint runtime = 40000;
 
 /*! multicast routing keys to communicate with neighbours */
 uint *key_values;

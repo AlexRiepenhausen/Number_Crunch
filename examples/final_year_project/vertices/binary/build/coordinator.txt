@@ -1887,8 +1887,8 @@ Disassembly of section RO_DATA:
      b80:	e3a00001 	mov	r0, #1
      b84:	0afffff6 	beq	b64 <send_string+0x150>
      b88:	e59a3000 	ldr	r3, [sl]
-     b8c:	e2433c6d 	sub	r3, r3, #27904	; 0x6d00
-     b90:	e2433061 	sub	r3, r3, #97	; 0x61
+     b8c:	e2433c76 	sub	r3, r3, #30208	; 0x7600
+     b90:	e24330c1 	sub	r3, r3, #193	; 0xc1
      b94:	e35300c6 	cmp	r3, #198	; 0xc6
      b98:	8a000025 	bhi	c34 <ETH_RX_SIZE+0x34>
      b9c:	e59f30a8 	ldr	r3, [pc, #168]	; c4c <ETH_RX_SIZE+0x4c>
@@ -2028,8 +2028,8 @@ Disassembly of section RO_DATA:
      dac:	e3a00001 	mov	r0, #1
      db0:	0afffff6 	beq	d90 <forward_string+0x118>
      db4:	e5953000 	ldr	r3, [r5]
-     db8:	e2433c6d 	sub	r3, r3, #27904	; 0x6d00
-     dbc:	e2433061 	sub	r3, r3, #97	; 0x61
+     db8:	e2433c76 	sub	r3, r3, #30208	; 0x7600
+     dbc:	e24330c1 	sub	r3, r3, #193	; 0xc1
      dc0:	e35300c6 	cmp	r3, #198	; 0xc6
      dc4:	8a00002b 	bhi	e78 <forward_string+0x200>
      dc8:	e3a03e27 	mov	r3, #624	; 0x270
@@ -2186,8 +2186,8 @@ Disassembly of section RO_DATA:
     1014:	e3a00001 	mov	r0, #1
     1018:	0afffff6 	beq	ff8 <RTR_TST2+0xf4>
     101c:	e5973000 	ldr	r3, [r7]
-    1020:	e2433c6d 	sub	r3, r3, #27904	; 0x6d00
-    1024:	e2433061 	sub	r3, r3, #97	; 0x61
+    1020:	e2433c76 	sub	r3, r3, #30208	; 0x7600
+    1024:	e24330c1 	sub	r3, r3, #193	; 0xc1
     1028:	e35300c6 	cmp	r3, #198	; 0xc6
     102c:	8a000023 	bhi	10c0 <SV_SIZE+0xc0>
     1030:	e59f309c 	ldr	r3, [pc, #156]	; 10d4 <SV_SIZE+0xd4>
@@ -2318,8 +2318,8 @@ Disassembly of section RO_DATA:
     121c:	e3a00001 	mov	r0, #1
     1220:	0afffff6 	beq	1200 <send_function_signal+0xfc>
     1224:	e5983000 	ldr	r3, [r8]
-    1228:	e2433c6d 	sub	r3, r3, #27904	; 0x6d00
-    122c:	e2433061 	sub	r3, r3, #97	; 0x61
+    1228:	e2433c76 	sub	r3, r3, #30208	; 0x7600
+    122c:	e24330c1 	sub	r3, r3, #193	; 0xc1
     1230:	e35300c6 	cmp	r3, #198	; 0xc6
     1234:	8a000022 	bhi	12c4 <send_function_signal+0x1c0>
     1238:	e59f3094 	ldr	r3, [pc, #148]	; 12d4 <send_function_signal+0x1d0>
@@ -3063,8 +3063,8 @@ Disassembly of section RO_DATA:
     1d88:	e3a00001 	mov	r0, #1
     1d8c:	0afffff6 	beq	1d6c <histogram_start_function+0x14c>
     1d90:	e5953000 	ldr	r3, [r5]
-    1d94:	e2433c6d 	sub	r3, r3, #27904	; 0x6d00
-    1d98:	e2433061 	sub	r3, r3, #97	; 0x61
+    1d94:	e2433c76 	sub	r3, r3, #30208	; 0x7600
+    1d98:	e24330c1 	sub	r3, r3, #193	; 0xc1
     1d9c:	e35300c6 	cmp	r3, #198	; 0xc6
     1da0:	8a000024 	bhi	1e38 <histogram_start_function+0x218>
     1da4:	e3a04003 	mov	r4, #3
@@ -3830,8 +3830,8 @@ Disassembly of section RO_DATA:
     294c:	e3a00001 	mov	r0, #1
     2950:	0afffff6 	beq	2930 <histogram_leader_next_step+0x12c>
     2954:	e5963000 	ldr	r3, [r6]
-    2958:	e2433c6d 	sub	r3, r3, #27904	; 0x6d00
-    295c:	e2433061 	sub	r3, r3, #97	; 0x61
+    2958:	e2433c76 	sub	r3, r3, #30208	; 0x7600
+    295c:	e24330c1 	sub	r3, r3, #193	; 0xc1
     2960:	e35300c6 	cmp	r3, #198	; 0xc6
     2964:	9a000001 	bls	2970 <histogram_leader_next_step+0x16c>
     2968:	e28dd008 	add	sp, sp, #8
@@ -4082,8 +4082,8 @@ Disassembly of section RO_DATA:
     2d2c:	e59f4180 	ldr	r4, [pc, #384]	; 2eb4 <update+0x18c>
     2d30:	e24dd00c 	sub	sp, sp, #12
     2d34:	e5943000 	ldr	r3, [r4]
-    2d38:	e2432c6d 	sub	r2, r3, #27904	; 0x6d00
-    2d3c:	e2422060 	sub	r2, r2, #96	; 0x60
+    2d38:	e2432c76 	sub	r2, r3, #30208	; 0x7600
+    2d3c:	e24220c0 	sub	r2, r2, #192	; 0xc0
     2d40:	e2833001 	add	r3, r3, #1
     2d44:	e35200c6 	cmp	r2, #198	; 0xc6
     2d48:	e5843000 	str	r3, [r4]
@@ -4197,8 +4197,8 @@ Disassembly of section RO_DATA:
     2ef0:	e24dd008 	sub	sp, sp, #8
     2ef4:	e5943000 	ldr	r3, [r4]
     2ef8:	e1a05001 	mov	r5, r1
-    2efc:	e2433c6d 	sub	r3, r3, #27904	; 0x6d00
-    2f00:	e2433061 	sub	r3, r3, #97	; 0x61
+    2efc:	e2433c76 	sub	r3, r3, #30208	; 0x7600
+    2f00:	e24330c1 	sub	r3, r3, #193	; 0xc1
     2f04:	e35300c6 	cmp	r3, #198	; 0xc6
     2f08:	9a00001e 	bls	2f88 <receive_data+0xa0>
     2f0c:	e59f30f0 	ldr	r3, [pc, #240]	; 3004 <receive_data+0x11c>
@@ -9336,7 +9336,7 @@ Disassembly of section RO_DATA:
     6a28:	726f6f63 616e6964 00726f74              coordinator.
 
 00006a34 <build_date>:
-    6a34:	5a80ab97 2f637273 61746164 6570735f     ...Zsrc/data_spe
+    6a34:	5a818e40 2f637273 61746164 6570735f     @..Zsrc/data_spe
     6a44:	69666963 69746163 632e6e6f 4e495b00     cification.c.[IN
     6a54:	205d4f46 28202020 253a7325 3a296434     FO]    (%s:%4d):
     6a64:	52445320 64204d41 20617461 69676562      SDRAM data begi
